@@ -339,25 +339,83 @@ TeleVuer 到 `TeleopFrame` 的适配器。
 | `binocular` | 是否按双目图像配置 Quest viewer |
 | `image_shape` | TeleVuer 所需的 `(高度, 宽度, 通道)` 占位形状 |
 | `display_mode` | `immersive`、`ego` 或 `pass-through` |
-| `show_hand_markers` | 是否显示手部关节/骨架标记 |
-| `wrapper_factory` | 测试或自定义 TeleVuer 包装器的依赖注入工厂 |
+| `show_hand_markers` | 是否显示手部关节/骨架标记；旧版限制见下文 |
+| `wrapper_factory` | 测试或自定义 TeleVuer 包装器的依赖注入工厂；工厂必须支持签名反射 |
 
-`start()` 延迟导入并构造 `televuer.TeleVuerWrapper`，固定启用手部追踪、关闭 ZMQ
-和 WebRTC 图像流，并使用 `head_yaw` 手臂参考模式。
+### 6.1 启动和 TeleVuer 版本兼容
+
+`start()` 延迟导入并构造 `televuer.TeleVuerWrapper`，固定请求启用手部追踪并关闭
+ZMQ 和 WebRTC 图像流。项目当前锁定 TeleVuer 4.0.0，但适配器也允许注入其他
+版本或自定义 wrapper。
+
+TeleVuer 不同版本的构造参数不同。适配器使用 `inspect.signature()` 检查 factory：
+
+- factory 声明 `**kwargs` 时，传递全部内部选项；
+- factory 使用显式参数时，只传递其签名中存在的选项；
+- 被过滤的可选参数会写入 INFO 日志，而不是导致构造失败；
+- 自定义 factory 如果无法被 `inspect.signature()` 反射，`start()` 会传播相应的
+  `TypeError` 或 `ValueError`。
+
+完整内部选项为：
+
+```python
+{
+    "use_hand_tracking": True,
+    "binocular": binocular,
+    "img_shape": image_shape,
+    "display_mode": display_mode,
+    "zmq": False,
+    "webrtc": False,
+    "arm_reference_mode": "head_yaw",
+    "show_hand_markers": show_hand_markers,
+}
+```
+
+其中锁定的 TeleVuer 4.0.0 不声明 `arm_reference_mode` 和 `show_hand_markers`，因此
+这两个构造参数会被过滤。适配器会为该旧版安装运行时兼容处理：
+
+- 接受扁平的 400 元素手事件，或可展平为 25×16 矩阵的手事件；
+- 分别更新左右手腕矩阵、25 个关键点位置、方向以及 pinch/squeeze 状态；
+- 在 `pass-through` 模式中应用 `show_hand_markers`。
+
+旧版 `immersive` 和 `ego` 渲染函数仍由 TeleVuer 自己控制 marker，本兼容层不保证
+`show_hand_markers` 在这两种模式生效。运行时兼容会修改进程内 TeleVuer 类方法，
+因此同一 Python 进程中的其他 TeleVuer 使用者也会看到兼容实现；当前应用按一个
+`QuestSource` 实例设计。
+
+### 6.2 帧映射和 readiness
 
 `read()` 对 TeleVuer 数据做如下映射：
 
 | TeleVuer 属性 | `TeleopFrame` 字段 |
 |---|---|
-| `motion_data_ready` | `motion_data_ready` |
+| `motion_data_ready`（如果存在） | `motion_data_ready` |
 | `left_hand_pos` | `left_hand.landmarks` |
 | `right_hand_pos` | `right_hand.landmarks` |
 | `left_wrist_pose` | `left_hand.wrist` |
 | `right_wrist_pose` | `right_hand.wrist` |
 | `head_pose` | `head` |
 
-只有 `motion_data_ready=True` 时才装配运动字段。缺少某只手时，该手字段为 `None`；
-形状、有限值或刚体矩阵校验失败会抛出 `ValueError`。
+readiness 按以下优先级确定：
+
+1. `TeleData.motion_data_ready` 存在且不为 `None` 时，对其取 `bool()`；
+2. 旧版没有该字段时，依次检查 `left_hand_pos` 和 `right_hand_pos`；
+3. 至少一只手必须是完整、有限且包含绝对值大于 `1e-9` 数据的 `(25, 3)` 数组；
+4. 两只手都缺失、格式错误或全零时，readiness 为 `False`。
+
+只有 readiness 为 `True` 时才装配运动字段。缺少某只手时，该手字段为 `None`；
+形状、有限值或刚体矩阵校验失败会抛出 `ValueError`。显式 readiness 的行为优先，
+因此提供该字段的 wrapper 与此前 API 语义相同。
+
+### 6.3 Legacy readiness 的限制
+
+非零关键点推断只能过滤 TeleVuer 4.0.0 启动时的全零占位数据，不能证明数据是新鲜
+的。如果 XR 停止发送事件而共享内存仍保留上一帧，readiness 可能继续为 `True`。
+同时，“任意一只手非零”不代表特定启用侧一定有效；消费模块仍须验证自己需要的手。
+
+因此机械臂模块不得仅依赖 legacy readiness 作为安全看门狗。应额外维护事件序号或
+本机最后接收时间，并在超时后保持/停止机械臂。`TeleopFrame.timestamp` 表示
+`QuestSource.read()` 的本机读取时间，不是底层 XR 事件产生时间。
 
 ## 7. `HandTeleopModule`
 
