@@ -11,10 +11,9 @@ from typing import TYPE_CHECKING, Callable, Sequence
 
 import numpy as np
 
-from .hand_retargeting import HandRetargeting
-
 if TYPE_CHECKING:
     from .dexhand import Dexhand
+    from .hand_retargeting import HandRetargeting
 
 try:
     import logging_mp
@@ -357,6 +356,11 @@ class HandController:
         )
         self._stop_event = threading.Event()
         self._control_error: BaseException | None = None
+        # Retargeting brings in the URDF/kinematics stack.  Load it only when
+        # an actual hand controller is constructed so the public API, speed
+        # planners, arm-only applications, and --help stay lightweight.
+        from .hand_retargeting import HandRetargeting
+
         self._hand_retargeting = HandRetargeting()
 
         self.left_hand_state_array = Array("d", JOINT_COUNT, lock=True)

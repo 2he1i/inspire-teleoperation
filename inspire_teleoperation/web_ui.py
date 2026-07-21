@@ -7,7 +7,7 @@ import logging
 import threading
 import webbrowser
 from collections import deque
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -31,6 +31,7 @@ class TeleopSnapshot:
     speed_mode: str = "adaptive_v2"
     left_speed: tuple[float, ...] = ()
     right_speed: tuple[float, ...] = ()
+    modules: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 class _WebLogHandler(logging.Handler):

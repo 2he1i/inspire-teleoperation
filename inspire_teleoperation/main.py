@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-"""Quest hand tracking to six-DOF dexterous hands, without arm control.
+"""Compose Quest tracking and robot modules into the Web application.
 
-This entry point owns only three data-path stages:
-Quest hand landmarks -> dex-retargeting -> hand Modbus TCP commands.
-It deliberately does not initialise cameras, robot motion, arm controllers,
-or inverse kinematics, so it can later be embedded below a separate arm
-teleoperation application.
+The shipped composition enables the dexterous-hand module.  Sources, frame
+contracts, lifecycle orchestration, and output modules live outside this entry
+point so an arm module can be registered alongside it without changing the
+control loop.
 """
 
 import argparse
 import os
 import sys
 import time
-from multiprocessing import Array, Lock, Value
 
 import numpy as np
 try:
@@ -153,35 +151,18 @@ def _apply_web_config(args, config):
         setattr(args, name, config[name])
 
 
-def _read_shared(values):
-    lock = getattr(values, "get_lock", lambda: None)()
-    if lock is None:
-        return tuple(values[:])
-    with lock:
-        return tuple(values[:])
-
-
 def main():
     args = parse_args()
     from inspire_teleoperation.web_ui import HandTeleoperationWebUI, TeleopSnapshot
 
     state = TeleopState()
-    tv_wrapper = None
-    hand_controller = None
+    runtime = None
+    hand_module = None
     web_ui = HandTeleoperationWebUI(args)
     session_started_at = 0.0
     loop_hz = 0.0
     loop_sample_started_at = 0.0
     loop_sample_count = 0
-    xr_motion_data_ready = Value("b", False, lock=True)
-    xr_motion_data_sequence = Value("L", 0, lock=True)
-
-    # Each hand uses the Quest/OpenXR 25-landmark x 3-coordinate layout.
-    left_hand_pos = Array("d", 75, lock=True)
-    right_hand_pos = Array("d", 75, lock=True)
-    dual_hand_data_lock = Lock()
-    dual_hand_state = Array("d", 12, lock=False)
-    dual_hand_action = Array("d", 12, lock=False)
 
     try:
         web_ui.start(open_browser=args.browser)
@@ -196,27 +177,21 @@ def main():
 
         # Import hardware integrations only after the browser setup form is
         # confirmed, keeping --help and the setup page hardware-independent.
-        from televuer import TeleVuerWrapper
-        from inspire_teleoperation.hand_controller import HandController
+        from inspire_teleoperation.hand_module import HandTeleopModule
+        from inspire_teleoperation.api import TeleopFrame
+        from inspire_teleoperation.quest_source import QuestSource
+        from inspire_teleoperation.runtime import TeleopRuntime
 
-        tv_wrapper = TeleVuerWrapper(
-            use_hand_tracking=True,
+        source = QuestSource(
             binocular=args.binocular,
-            img_shape=(args.image_height, args.image_width, 3),
+            image_shape=(args.image_height, args.image_width, 3),
             display_mode=args.display_mode,
-            zmq=False,
-            webrtc=False,
-            arm_reference_mode="head_yaw",
             show_hand_markers=not args.hide_hand_markers,
         )
-        hand_controller = HandController(
-            left_hand_pos,
-            right_hand_pos,
-            dual_hand_data_lock,
-            dual_hand_state,
-            dual_hand_action,
+        hand_module = HandTeleopModule(
             left_host=args.left_hand_host,
             right_host=args.right_hand_host,
+            open_on_exit=args.open_on_exit,
             port=args.modbus_port,
             left_device_id=args.left_device_id,
             right_device_id=args.right_device_id,
@@ -224,9 +199,10 @@ def main():
             target_speed=args.target_speed,
             speed_mode=args.speed_mode,
             fps=args.hand_frequency,
-            xr_motion_data_ready_in=xr_motion_data_ready,
-            xr_motion_data_sequence_in=xr_motion_data_sequence,
         )
+        runtime = TeleopRuntime(source, [hand_module])
+        runtime.set_enabled(state.tracking_enabled)
+        runtime.start()
 
         logger_mp.info("Hand teleoperation is ready.")
         logger_mp.info("Use the web console to run, pause, change speed mode, or quit.")
@@ -247,42 +223,27 @@ def main():
             action = web_ui.poll_action()
             if action == "run":
                 state.apply_action("run")
+                runtime.set_enabled(True)
             elif action == "pause":
                 state.apply_action("pause")
+                runtime.set_enabled(False)
             elif action == "quit":
                 state.apply_action("quit")
+                runtime.set_enabled(False)
                 continue
             elif action == "speed_mode":
-                mode = hand_controller.toggle_speed_mode()
+                mode = hand_module.toggle_speed_mode()
                 logger_mp.info("Switched to %s joint speed mode.", mode)
-            hand_controller.raise_if_failed()
-            tele_data = tv_wrapper.get_tele_data()
-            motion_ready = bool(getattr(tele_data, "motion_data_ready", False))
-
-            # Tell the controller not to consume the shared landmarks while a
-            # complete left/right frame is being copied.
-            with xr_motion_data_ready.get_lock():
-                xr_motion_data_ready.value = False
-
-            if state.tracking_enabled and motion_ready:
-                try:
-                    with dual_hand_data_lock:
-                        if args.left_hand_host:
-                            _copy_landmarks(left_hand_pos, tele_data.left_hand_pos, "left")
-                        if args.right_hand_host:
-                            _copy_landmarks(right_hand_pos, tele_data.right_hand_pos, "right")
-                    with xr_motion_data_sequence.get_lock():
-                        xr_motion_data_sequence.value += 1
-                except (AttributeError, TypeError, ValueError) as error:
-                    # A transient malformed XR frame must not become a hand
-                    # command or kill the control session.
-                    motion_ready = False
-                    logger_mp.warning("Ignoring invalid Quest hand frame: %s", error)
-
-            # The controller only retargets fresh data when this flag is true.
-            # On pause, tracking loss, or invalid data it retains the last target.
-            with xr_motion_data_ready.get_lock():
-                xr_motion_data_ready.value = state.tracking_enabled and motion_ready
+            try:
+                frame = runtime.step()
+            except (AttributeError, TypeError, ValueError) as error:
+                # A transient malformed XR frame must not become a robot
+                # command or kill the control session.
+                motion_ready = False
+                logger_mp.warning("Ignoring invalid Quest tracking frame: %s", error)
+                runtime.dispatch(TeleopFrame.empty())
+            else:
+                motion_ready = frame.motion_data_ready
 
             loop_sample_count += 1
             sample_elapsed = time.monotonic() - loop_sample_started_at
@@ -291,22 +252,32 @@ def main():
                 loop_sample_started_at = time.monotonic()
                 loop_sample_count = 0
 
-            action_values = _read_shared(dual_hand_action)
+            module_statuses = runtime.status()
+            hand_status = module_statuses[hand_module.name]
+            telemetry = hand_status.telemetry
+            motion_ready = bool(telemetry["motion_data_ready"])
             web_ui.publish(
                 TeleopSnapshot(
                     tracking_enabled=state.tracking_enabled,
                     motion_data_ready=motion_ready,
                     loop_hz=loop_hz,
                     elapsed_seconds=time.monotonic() - session_started_at,
-                    left_enabled=bool(args.left_hand_host),
-                    right_enabled=bool(args.right_hand_host),
-                    left_state=_read_shared(hand_controller.left_hand_state_array),
-                    right_state=_read_shared(hand_controller.right_hand_state_array),
-                    left_target=action_values[:6],
-                    right_target=action_values[6:],
-                    speed_mode=hand_controller.speed_mode,
-                    left_speed=_read_shared(hand_controller.left_hand_speed_array),
-                    right_speed=_read_shared(hand_controller.right_hand_speed_array),
+                    left_enabled=telemetry["left_enabled"],
+                    right_enabled=telemetry["right_enabled"],
+                    left_state=telemetry["left_state"],
+                    right_state=telemetry["right_state"],
+                    left_target=telemetry["left_target"],
+                    right_target=telemetry["right_target"],
+                    speed_mode=telemetry["speed_mode"],
+                    left_speed=telemetry["left_speed"],
+                    right_speed=telemetry["right_speed"],
+                    modules={
+                        name: {
+                            "ready": status.ready,
+                            "detail": status.detail,
+                        }
+                        for name, status in module_statuses.items()
+                    },
                 )
             )
 
@@ -321,13 +292,10 @@ def main():
         raise
     finally:
         web_ui.set_phase("stopping")
-        with xr_motion_data_ready.get_lock():
-            xr_motion_data_ready.value = False
         try:
-            if hand_controller is not None:
-                hand_controller.stop(open_hand=args.open_on_exit)
-            if tv_wrapper is not None:
-                tv_wrapper.close()
+            if runtime is not None:
+                runtime.set_enabled(False)
+                runtime.close()
         finally:
             web_ui.set_phase("stopped")
             web_ui.stop()
