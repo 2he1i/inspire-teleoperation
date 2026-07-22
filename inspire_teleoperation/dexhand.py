@@ -1,7 +1,7 @@
 """六自由度灵巧手的 Modbus TCP 通信 API。
 
-提供原始寄存器读写以及六自由度速度、位置、角度、力和状态寄存器的便捷接口；
-不包含触觉、运动学、关节坐标或角度转换。
+提供原始寄存器读写、六自由度速度/位置/角度/力/状态寄存器，以及压阻式
+触觉阵列的便捷读取接口；不包含运动学、关节坐标或角度转换。
 """
 
 from __future__ import annotations
@@ -25,6 +25,8 @@ DEFAULT_TIMEOUT_SECONDS = 3.0
 DOF_COUNT = 6
 MAX_MODBUS_READ_REGISTERS = 125
 MAX_MODBUS_WRITE_REGISTERS = 123
+TACTILE_START_ADDRESS = 3000
+TACTILE_END_ADDRESS = 5124
 
 DOF_NAMES = (
     "finger4",
@@ -36,6 +38,7 @@ DOF_NAMES = (
 )
 
 JointArray = NDArray[np.signedinteger | np.unsignedinteger]
+TactileArray = NDArray[np.uint16]
 
 
 class ModbusClient(Protocol):
@@ -68,6 +71,28 @@ class RegisterSpec:
     allow_no_change: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class TactileRegionSpec:
+    """一个触觉区域的字节地址、空间形状和设备存储顺序。"""
+
+    address: int
+    rows: int
+    columns: int
+    palm_column_major: bool = False
+
+    @property
+    def byte_count(self) -> int:
+        """该区域在设备字节地址空间内占用的字节数。"""
+
+        return self.rows * self.columns * 2
+
+    @property
+    def register_count(self) -> int:
+        """该区域通过 Modbus 读取的 16 位触点/寄存器数量。"""
+
+        return self.rows * self.columns
+
+
 REGISTER_SPECS: dict[str, RegisterSpec] = {
     "default_speeds": RegisterSpec(1032, 0, 1000, writable=True),
     "default_force_limits": RegisterSpec(1044, 0, 3000, writable=True),
@@ -84,11 +109,49 @@ REGISTER_SPECS: dict[str, RegisterSpec] = {
 }
 
 
+TACTILE_REGION_SPECS: dict[str, TactileRegionSpec] = {
+    "little_tip": TactileRegionSpec(3000, 3, 3),
+    "little_nail": TactileRegionSpec(3018, 12, 8),
+    "little_pad": TactileRegionSpec(3210, 10, 8),
+    "ring_tip": TactileRegionSpec(3370, 3, 3),
+    "ring_nail": TactileRegionSpec(3388, 12, 8),
+    "ring_pad": TactileRegionSpec(3580, 10, 8),
+    "middle_tip": TactileRegionSpec(3740, 3, 3),
+    "middle_nail": TactileRegionSpec(3758, 12, 8),
+    "middle_pad": TactileRegionSpec(3950, 10, 8),
+    "index_tip": TactileRegionSpec(4110, 3, 3),
+    "index_nail": TactileRegionSpec(4128, 12, 8),
+    "index_pad": TactileRegionSpec(4320, 10, 8),
+    "thumb_tip": TactileRegionSpec(4480, 3, 3),
+    "thumb_nail": TactileRegionSpec(4498, 12, 8),
+    "thumb_middle": TactileRegionSpec(4690, 3, 3),
+    "thumb_pad": TactileRegionSpec(4708, 12, 8),
+    "palm": TactileRegionSpec(4900, 8, 14, palm_column_major=True),
+}
+
+
+# 相邻小区域可在一个 FC03 请求内读取；每批不超过 Modbus 的 125 寄存器上限。
+TACTILE_READ_BATCHES: tuple[tuple[int, tuple[str, ...]], ...] = (
+    (3000, ("little_tip", "little_nail")),
+    (3210, ("little_pad",)),
+    (3370, ("ring_tip", "ring_nail")),
+    (3580, ("ring_pad",)),
+    (3740, ("middle_tip", "middle_nail")),
+    (3950, ("middle_pad",)),
+    (4110, ("index_tip", "index_nail")),
+    (4320, ("index_pad",)),
+    (4480, ("thumb_tip", "thumb_nail")),
+    (4690, ("thumb_middle", "thumb_pad")),
+    (4900, ("palm",)),
+)
+
+
 class Dexhand:
     """灵巧手的 Modbus TCP 客户端。
 
     构造函数不会连接设备。除原始寄存器 API 外，六自由度便捷方法只做寄存器
-    地址选择、范围校验与 16 位有符号值/``-1`` 保持不动标记的协议转换。
+    地址选择、范围校验与 16 位有符号值/``-1`` 保持不动标记的协议转换；触觉
+    方法负责分批读取和二维空间布局转换。
     """
 
     def __init__(
@@ -330,6 +393,51 @@ class Dexhand:
 
         return self._read_byte_block(1618, DOF_COUNT)
 
+    def read_tactile_region(self, name: str) -> TactileArray:
+        """读取一个具名触觉区域，返回按实际行列排列的二维 ``uint16`` 数组。
+
+        区域名称见 :data:`TACTILE_REGION_SPECS`。手指区域按文档给出的逐行顺序
+        排列；掌心数据会从设备的逐列、行倒序存储转换为常规的 ``[row, column]``
+        排列。触点的协议定义范围为 0～4095。
+        """
+
+        if not isinstance(name, str):
+            raise TypeError("name 必须是字符串")
+        try:
+            spec = TACTILE_REGION_SPECS[name]
+        except KeyError as error:
+            available = ", ".join(TACTILE_REGION_SPECS)
+            raise ValueError(f"未知触觉区域 {name!r}；可用区域：{available}") from error
+
+        # 文档地址按字节递增，但 FC03 count 和 PyModbus 响应均按 16 位 word 计数。
+        values = self.read_registers(spec.address, spec.register_count)
+        return self._reshape_tactile_region(values, spec)
+
+    def read_tactile(self) -> dict[str, TactileArray]:
+        """读取完整压阻式触觉帧，返回 17 个具名二维区域。
+
+        设备的触觉区是 3000～5123 的连续字节地址，共 1062 个 16 位触点。一次
+        Modbus 读取不能覆盖完整数据，因此内部会合并相邻区域分批读取，并在同一
+        客户端锁内完成整帧。
+        """
+
+        regions: dict[str, TactileArray] = {}
+        with self._lock:
+            for address, names in TACTILE_READ_BATCHES:
+                count = sum(
+                    TACTILE_REGION_SPECS[name].register_count for name in names
+                )
+                values = self.read_registers(address, count)
+                offset = 0
+                for name in names:
+                    spec = TACTILE_REGION_SPECS[name]
+                    end = offset + spec.register_count
+                    regions[name] = self._reshape_tactile_region(
+                        values[offset:end], spec
+                    )
+                    offset = end
+        return regions
+
     def clear_errors(self) -> None:
         """清除设备允许清除的错误。"""
 
@@ -385,6 +493,19 @@ class Dexhand:
         result[1::2] = (words[: count // 2] >> 8) & 0xFF
         return result
 
+    @staticmethod
+    def _reshape_tactile_region(
+        values: TactileArray, spec: TactileRegionSpec
+    ) -> TactileArray:
+        if values.size != spec.register_count:
+            raise RuntimeError(
+                "触觉区域数据长度错误："
+                f"期望 {spec.register_count} 个值，实际 {values.size} 个"
+            )
+        if spec.palm_column_major:
+            return values.reshape(spec.columns, spec.rows)[:, ::-1].T.copy()
+        return values.reshape(spec.rows, spec.columns).copy()
+
     def _require_connected(self) -> None:
         if not self.is_connected:
             raise ConnectionError("Modbus TCP 客户端尚未连接，请先调用 connect()")
@@ -427,4 +548,10 @@ __all__ = [
     "MAX_MODBUS_READ_REGISTERS",
     "MAX_MODBUS_WRITE_REGISTERS",
     "REGISTER_SPECS",
+    "TACTILE_END_ADDRESS",
+    "TACTILE_READ_BATCHES",
+    "TACTILE_REGION_SPECS",
+    "TACTILE_START_ADDRESS",
+    "TactileArray",
+    "TactileRegionSpec",
 ]

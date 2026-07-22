@@ -12,6 +12,9 @@ __pycache__/
 # Local test suite
 tests/
 
+# Local agent instructions
+AGENTS.md
+
 # Build artifacts and package metadata
 build/
 dist/

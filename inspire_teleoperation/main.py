@@ -47,7 +47,10 @@ class TeleopState:
             logger_mp.info("Hand tracking enabled.")
         elif action == "pause":
             self.tracking_enabled = False
-            logger_mp.info("Hand tracking paused; retaining the last hand target.")
+            logger_mp.info("Hand tracking stopped; retaining the last hand target.")
+        elif action == "disconnect":
+            self.tracking_enabled = False
+            logger_mp.info("Device session disconnected; returning to setup.")
         elif action == "quit":
             self.tracking_enabled = False
             self.running = False
@@ -103,7 +106,11 @@ def parse_args(argv=None):
         help="Hide Quest hand joint/skeleton markers (shown by default).",
     )
     parser.add_argument("--start", action="store_true", help="Enable tracking immediately after the web setup is confirmed.")
-    parser.add_argument("--open-on-exit", action="store_true", help="Command all joints to 1000 (open) after a clean exit.")
+    parser.add_argument(
+        "--open-on-exit",
+        action="store_true",
+        help="Command all joints to 1000 (open) when a device session disconnects cleanly.",
+    )
     parser.add_argument("--web-host", default="127.0.0.1", help="Web console listen address (default: 127.0.0.1).")
     parser.add_argument("--web-port", type=int, default=8080, help="Web console port (default: 8080).")
     parser.add_argument(
@@ -156,149 +163,174 @@ def main():
     from inspire_teleoperation.web_ui import HandTeleoperationWebUI, TeleopSnapshot
 
     state = TeleopState()
-    runtime = None
-    hand_module = None
     web_ui = HandTeleoperationWebUI(args)
-    session_started_at = 0.0
-    loop_hz = 0.0
-    loop_sample_started_at = 0.0
-    loop_sample_count = 0
 
     try:
         web_ui.start(open_browser=args.browser)
         logger_mp.info("Hand teleoperation web console: %s", web_ui.url)
-        logger_mp.info("Waiting for connection settings and safety confirmation.")
-        config = web_ui.wait_for_setup()
-        if config is None:
-            return
-        _apply_web_config(args, config)
-        state.tracking_enabled = args.start
-        web_ui.set_phase("connecting")
-
-        # Import hardware integrations only after the browser setup form is
-        # confirmed, keeping --help and the setup page hardware-independent.
-        from inspire_teleoperation.hand_module import HandTeleopModule
-        from inspire_teleoperation.api import TeleopFrame
-        from inspire_teleoperation.quest_source import QuestSource
-        from inspire_teleoperation.runtime import TeleopRuntime
-
-        source = QuestSource(
-            binocular=args.binocular,
-            image_shape=(args.image_height, args.image_width, 3),
-            display_mode=args.display_mode,
-            show_hand_markers=not args.hide_hand_markers,
-        )
-        hand_module = HandTeleopModule(
-            left_host=args.left_hand_host,
-            right_host=args.right_hand_host,
-            open_on_exit=args.open_on_exit,
-            port=args.modbus_port,
-            left_device_id=args.left_device_id,
-            right_device_id=args.right_device_id,
-            timeout=args.modbus_timeout,
-            target_speed=args.target_speed,
-            speed_mode=args.speed_mode,
-            fps=args.hand_frequency,
-        )
-        runtime = TeleopRuntime(source, [hand_module])
-        runtime.set_enabled(state.tracking_enabled)
-        runtime.start()
-
-        logger_mp.info("Hand teleoperation is ready.")
-        logger_mp.info("Use the web console to run, pause, change speed mode, or quit.")
-        enabled_sides = [
-            side
-            for side, host in (("left", args.left_hand_host), ("right", args.right_hand_host))
-            if host
-        ]
-        logger_mp.info("Enabled hand(s): %s.", ", ".join(enabled_sides))
-        logger_mp.info("Keep clear of enabled hands while commands are enabled.")
-        web_ui.set_phase("live")
-
-        session_started_at = time.monotonic()
-        loop_sample_started_at = session_started_at
-
         while state.running:
-            cycle_start = time.monotonic()
-            action = web_ui.poll_action()
-            if action == "run":
-                state.apply_action("run")
-                runtime.set_enabled(True)
-            elif action == "pause":
-                state.apply_action("pause")
-                runtime.set_enabled(False)
-            elif action == "quit":
+            runtime = None
+            session_error = ""
+            logger_mp.info("Waiting for connection settings and safety confirmation.")
+            config = web_ui.wait_for_setup()
+            if config is None:
                 state.apply_action("quit")
-                runtime.set_enabled(False)
-                continue
-            elif action == "speed_mode":
-                mode = hand_module.toggle_speed_mode()
-                logger_mp.info("Switched to %s joint speed mode.", mode)
+                break
+
+            _apply_web_config(args, config)
+            state.tracking_enabled = args.start
+            web_ui.set_phase("connecting")
+
             try:
-                frame = runtime.step()
-            except (AttributeError, TypeError, ValueError) as error:
-                # A transient malformed XR frame must not become a robot
-                # command or kill the control session.
-                motion_ready = False
-                logger_mp.warning("Ignoring invalid Quest tracking frame: %s", error)
-                runtime.dispatch(TeleopFrame.empty())
-            else:
-                motion_ready = frame.motion_data_ready
+                # Import hardware integrations only after the browser setup form is
+                # confirmed, keeping --help and the setup page hardware-independent.
+                from inspire_teleoperation.api import TeleopFrame
+                from inspire_teleoperation.hand_module import HandTeleopModule
+                from inspire_teleoperation.quest_source import QuestSource
+                from inspire_teleoperation.runtime import TeleopRuntime
 
-            loop_sample_count += 1
-            sample_elapsed = time.monotonic() - loop_sample_started_at
-            if sample_elapsed >= 0.5:
-                loop_hz = loop_sample_count / sample_elapsed
-                loop_sample_started_at = time.monotonic()
-                loop_sample_count = 0
-
-            module_statuses = runtime.status()
-            hand_status = module_statuses[hand_module.name]
-            telemetry = hand_status.telemetry
-            motion_ready = bool(telemetry["motion_data_ready"])
-            web_ui.publish(
-                TeleopSnapshot(
-                    tracking_enabled=state.tracking_enabled,
-                    motion_data_ready=motion_ready,
-                    loop_hz=loop_hz,
-                    elapsed_seconds=time.monotonic() - session_started_at,
-                    left_enabled=telemetry["left_enabled"],
-                    right_enabled=telemetry["right_enabled"],
-                    left_state=telemetry["left_state"],
-                    right_state=telemetry["right_state"],
-                    left_target=telemetry["left_target"],
-                    right_target=telemetry["right_target"],
-                    speed_mode=telemetry["speed_mode"],
-                    left_speed=telemetry["left_speed"],
-                    right_speed=telemetry["right_speed"],
-                    modules={
-                        name: {
-                            "ready": status.ready,
-                            "detail": status.detail,
-                        }
-                        for name, status in module_statuses.items()
-                    },
+                source = QuestSource(
+                    binocular=args.binocular,
+                    image_shape=(args.image_height, args.image_width, 3),
+                    display_mode=args.display_mode,
+                    show_hand_markers=not args.hide_hand_markers,
                 )
-            )
+                hand_module = HandTeleopModule(
+                    left_host=args.left_hand_host,
+                    right_host=args.right_hand_host,
+                    open_on_exit=args.open_on_exit,
+                    port=args.modbus_port,
+                    left_device_id=args.left_device_id,
+                    right_device_id=args.right_device_id,
+                    timeout=args.modbus_timeout,
+                    target_speed=args.target_speed,
+                    speed_mode=args.speed_mode,
+                    fps=args.hand_frequency,
+                )
+                runtime = TeleopRuntime(source, [hand_module])
+                runtime.set_enabled(state.tracking_enabled)
+                runtime.start()
 
-            sleep_time = (1.0 / args.frequency) - (time.monotonic() - cycle_start)
-            if sleep_time > 0:
-                time.sleep(sleep_time)
+                logger_mp.info("Hand teleoperation is ready.")
+                logger_mp.info(
+                    "Use the web console to start or stop tracking, change speed, "
+                    "or disconnect the devices."
+                )
+                enabled_sides = [
+                    side
+                    for side, host in (
+                        ("left", args.left_hand_host),
+                        ("right", args.right_hand_host),
+                    )
+                    if host
+                ]
+                logger_mp.info("Enabled hand(s): %s.", ", ".join(enabled_sides))
+                logger_mp.info("Keep clear of enabled hands while commands are enabled.")
+                web_ui.set_phase("live")
+
+                session_started_at = time.monotonic()
+                loop_sample_started_at = session_started_at
+                loop_sample_count = 0
+                loop_hz = 0.0
+                session_active = True
+
+                while state.running and session_active:
+                    cycle_start = time.monotonic()
+                    action = web_ui.poll_action()
+                    if action == "run":
+                        state.apply_action("run")
+                        runtime.set_enabled(True)
+                    elif action == "pause":
+                        state.apply_action("pause")
+                        runtime.set_enabled(False)
+                    elif action == "disconnect":
+                        state.apply_action("disconnect")
+                        runtime.set_enabled(False)
+                        web_ui.set_phase("disconnecting")
+                        session_active = False
+                        continue
+                    elif action == "quit":
+                        state.apply_action("quit")
+                        runtime.set_enabled(False)
+                        continue
+                    elif action == "speed_mode":
+                        mode = hand_module.toggle_speed_mode()
+                        logger_mp.info("Switched to %s joint speed mode.", mode)
+
+                    try:
+                        runtime.step()
+                    except (AttributeError, TypeError, ValueError) as error:
+                        # A transient malformed XR frame must not become a robot
+                        # command or kill the control session.
+                        logger_mp.warning(
+                            "Ignoring invalid Quest tracking frame: %s", error
+                        )
+                        runtime.dispatch(TeleopFrame.empty())
+
+                    loop_sample_count += 1
+                    sample_elapsed = time.monotonic() - loop_sample_started_at
+                    if sample_elapsed >= 0.5:
+                        loop_hz = loop_sample_count / sample_elapsed
+                        loop_sample_started_at = time.monotonic()
+                        loop_sample_count = 0
+
+                    module_statuses = runtime.status()
+                    hand_status = module_statuses[hand_module.name]
+                    telemetry = hand_status.telemetry
+                    web_ui.publish(
+                        TeleopSnapshot(
+                            tracking_enabled=state.tracking_enabled,
+                            motion_data_ready=bool(telemetry["motion_data_ready"]),
+                            loop_hz=loop_hz,
+                            elapsed_seconds=time.monotonic() - session_started_at,
+                            left_enabled=telemetry["left_enabled"],
+                            right_enabled=telemetry["right_enabled"],
+                            left_state=telemetry["left_state"],
+                            right_state=telemetry["right_state"],
+                            left_target=telemetry["left_target"],
+                            right_target=telemetry["right_target"],
+                            speed_mode=telemetry["speed_mode"],
+                            left_speed=telemetry["left_speed"],
+                            right_speed=telemetry["right_speed"],
+                            modules={
+                                name: {
+                                    "ready": status.ready,
+                                    "detail": status.detail,
+                                }
+                                for name, status in module_statuses.items()
+                            },
+                        )
+                    )
+
+                    sleep_time = (1.0 / args.frequency) - (
+                        time.monotonic() - cycle_start
+                    )
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
+            except KeyboardInterrupt:
+                raise
+            except Exception as error:
+                session_error = str(error)
+                web_ui.set_phase("error", session_error)
+                logger_mp.exception("Device session stopped due to an error.")
+            finally:
+                if runtime is not None:
+                    try:
+                        runtime.set_enabled(False)
+                        runtime.close()
+                    except Exception as error:
+                        logger_mp.exception("Failed to close the device session cleanly.")
+                        if not session_error:
+                            session_error = str(error)
+
+            if state.running:
+                web_ui.return_to_setup(session_error)
     except KeyboardInterrupt:
         logger_mp.info("Keyboard interrupt received; exiting hand teleoperation.")
-    except Exception as error:
-        web_ui.set_phase("error", str(error))
-        logger_mp.exception("Hand teleoperation stopped due to an error.")
-        raise
     finally:
         web_ui.set_phase("stopping")
-        try:
-            if runtime is not None:
-                runtime.set_enabled(False)
-                runtime.close()
-        finally:
-            web_ui.set_phase("stopped")
-            web_ui.stop()
+        web_ui.set_phase("stopped")
+        web_ui.stop()
 
 
 if __name__ == "__main__":

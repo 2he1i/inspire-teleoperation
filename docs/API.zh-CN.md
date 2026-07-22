@@ -633,7 +633,7 @@ hardware_radians = radians[
 
 ## 9. `Dexhand` Modbus TCP API
 
-`Dexhand` 是同步、带锁的底层六自由度客户端。构造函数不连接设备。
+`Dexhand` 是同步、带锁的底层六自由度与触觉客户端。构造函数不连接设备。
 
 ```python
 Dexhand(
@@ -664,6 +664,10 @@ Dexhand(
 | `REGISTER_SPECS` | 具名连续寄存器块到 `RegisterSpec` 的映射 |
 | `ModbusClient` | 可注入客户端所需的结构化协议 |
 | `RegisterSpec` | `address/minimum/maximum/writable/signed/allow_no_change` 定义 |
+| `TACTILE_START_ADDRESS` / `TACTILE_END_ADDRESS` | 完整触觉区的起始/末尾独占字节地址，3000 / 5124 |
+| `TACTILE_REGION_SPECS` | 17 个区域的地址、行列形状和存储顺序 |
+| `TACTILE_READ_BATCHES` | 完整帧的 11 个 Modbus 读取批次 |
+| `TactileRegionSpec` / `TactileArray` | 触觉区域元数据与二维 `uint16` 数组类型 |
 
 ### 9.1 连接和上下文管理
 
@@ -718,7 +722,49 @@ write_registers(address: int, values: Sequence[int]) -> None
 每个写方法严格要求六个整数。`-1` 会编码为 `0xFFFF`，只允许用于目标位置和目标
 角度。
 
-### 9.4 状态和维护命令
+### 9.4 触觉读取
+
+RH56DFTP 压阻式触觉阵列通过以下两个同步 API 读取：
+
+```python
+read_tactile_region(name: str) -> NDArray[np.uint16]
+read_tactile() -> dict[str, NDArray[np.uint16]]
+```
+
+`read_tactile_region()` 只读取指定区域；`read_tactile()` 读取地址 3000～5123 的
+完整触觉帧并返回全部 17 个区域。每个返回数组都是二维的，使用 `[row, column]`
+索引，触点协议值范围为 0～4095。手指数据按文档的逐行顺序排列；掌心在设备中的
+逐列、行倒序数据会自动转换为正常的空间行列顺序。
+
+```python
+with Dexhand(host="192.168.11.210") as hand:
+    index_pad = hand.read_tactile_region("index_pad")  # shape: (10, 8)
+    tactile = hand.read_tactile()
+    palm = tactile["palm"]                              # shape: (8, 14)
+```
+
+可用区域名和形状：
+
+| 区域名 | 形状 | 区域名 | 形状 |
+|---|---:|---|---:|
+| `little_tip` | 3×3 | `little_nail` | 12×8 |
+| `little_pad` | 10×8 | `ring_tip` | 3×3 |
+| `ring_nail` | 12×8 | `ring_pad` | 10×8 |
+| `middle_tip` | 3×3 | `middle_nail` | 12×8 |
+| `middle_pad` | 10×8 | `index_tip` | 3×3 |
+| `index_nail` | 12×8 | `index_pad` | 10×8 |
+| `thumb_tip` | 3×3 | `thumb_nail` | 12×8 |
+| `thumb_middle` | 3×3 | `thumb_pad` | 12×8 |
+| `palm` | 8×14 | | |
+
+文档中的触觉地址是字节偏移，而 Modbus FC03 的 `count` 是 16 位寄存器数量；每个
+PyModbus 返回 word 对应一个触点，不应只取低 8 位。客户端把相邻的小区域合并成
+11 个读取批次，每批不超过 Modbus 的 125 寄存器上限；完整帧的所有批次由同一个
+`Dexhand` 锁串行化。区域元数据和批次可分别通过 `TACTILE_REGION_SPECS`、
+`TACTILE_READ_BATCHES` 查询。这里的“完整帧”是 11 次连续读取组成的逻辑帧；文档
+未定义硬件锁存机制，因此不同批次的采样时刻可能略有差异。
+
+### 9.5 状态和维护命令
 
 ```python
 read_error_codes() -> NDArray[np.uint8]
@@ -737,7 +783,7 @@ calibrate_force_sensors() -> None
 维护命令会直接写设备寄存器，尤其恢复出厂参数、保存 Flash 和力传感器校准可能
 改变持久状态或设备行为，只应在设备文档规定的安全条件下调用。
 
-### 9.5 等待动作稳定
+### 9.6 等待动作稳定
 
 ```python
 wait_for_motion_complete(
@@ -755,7 +801,7 @@ wait_for_motion_complete(
 注意：相邻采样完全相等只代表寄存器读数稳定，不等价于达到某个目标，也不构成
 功能安全判定。
 
-### 9.6 线程安全
+### 9.7 线程安全
 
 同一个 `Dexhand` 实例的连接和每次 Modbus 调用由 `RLock` 串行化。多个实例之间
 没有共享锁。不要让两个客户端同时控制同一个设备，除非设备协议明确支持。
@@ -805,11 +851,12 @@ TeleopSnapshot(
 | `start(open_browser=True)` | 启动后台 HTTP 线程，可选打开浏览器 |
 | `stop()` | 关闭服务器、移除日志 handler 并等待线程结束 |
 | `validate_setup(payload)` | 校验并归一化 setup 字典，不修改 UI 状态 |
-| `submit_setup(payload)` | 提交一次 setup 并切换到 `connecting` |
+| `submit_setup(payload)` | 在 `setup` 阶段提交配置并切换到 `connecting` |
 | `wait_for_setup()` | 阻塞等待 setup；先收到 quit 时返回 `None` |
 | `submit_action(action)` | 校验动作并放入线程安全队列 |
 | `poll_action()` | 非阻塞取出最早动作；队列为空返回 `None` |
 | `set_phase(phase, detail="")` | 更新阶段和说明 |
+| `return_to_setup(detail="")` | 清理当前快照和 setup 提交，保留配置并返回接入界面 |
 | `publish(snapshot)` | 原子替换当前 Web 快照 |
 | `add_message(level, message)` | 追加规范化、相邻去重的日志消息 |
 | `state_payload()` | 返回可 JSON 序列化的当前完整状态 |
@@ -849,7 +896,8 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
 }
 ```
 
-`phase` 当前使用 `setup`、`connecting`、`live`、`error`、`stopping`、`stopped`。
+`phase` 当前使用 `setup`、`connecting`、`live`、`disconnecting`、`error`、
+`stopping`、`stopped`。
 `snapshot` 在首次发布前为 `null`。`messages` 最多保留 80 条去重后的日志。
 
 ### 10.3 `POST /api/setup`
@@ -890,7 +938,8 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
 {"ok": true, "config": {}}
 ```
 
-设置只允许在 `setup` 阶段提交一次。验证失败返回 HTTP 400 和 `error` 字符串。
+设置只允许在 `setup` 阶段提交。设备断开后服务会重新进入 `setup`，保留上次配置，
+可修改后再次提交，无需重启 Python 进程。验证失败返回 HTTP 400 和 `error` 字符串。
 
 ### 10.4 `POST /api/action`
 
@@ -903,9 +952,10 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
 | 动作 | 含义 |
 |---|---|
 | `run` | 将全局 Teleop 使能设为真 |
-| `pause` | 停止发布新手部目标，保留最后目标 |
+| `pause` | 停止跟踪并停止发布新手部目标，保留最后目标 |
 | `speed_mode` | 循环切换手部速度模式 |
-| `quit` | 退出并执行关闭流程 |
+| `disconnect` | 关闭当前设备与 Quest 会话，返回 `setup`，Web 服务保持运行 |
+| `quit` | 关闭当前设备会话和 Web 服务，退出程序 |
 
 成功返回 HTTP 202：
 

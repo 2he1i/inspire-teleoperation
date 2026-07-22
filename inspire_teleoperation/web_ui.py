@@ -128,7 +128,7 @@ class HandTeleoperationWebUI:
         "/app.css": ("app.css", "text/css; charset=utf-8"),
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     }
-    _ACTIONS = {"run", "pause", "speed_mode", "quit"}
+    _ACTIONS = {"run", "pause", "speed_mode", "disconnect", "quit"}
 
     def __init__(self, args) -> None:
         self.host = args.web_host
@@ -301,6 +301,12 @@ class HandTeleoperationWebUI:
         with self._condition:
             if self._phase == "setup" and action != "quit":
                 raise ValueError("Connect the hands before sending controls")
+            if action in {"run", "pause", "speed_mode"} and self._phase != "live":
+                raise ValueError("Hand controls are available only while connected")
+            if action == "disconnect" and self._phase not in {
+                "connecting", "live", "error"
+            }:
+                raise ValueError("There is no active device session to disconnect")
             self._actions.append(action)
             self._condition.notify_all()
         return action
@@ -313,6 +319,19 @@ class HandTeleoperationWebUI:
         with self._condition:
             self._phase = phase
             self._detail = detail
+
+    def return_to_setup(self, detail: str = "") -> None:
+        """End the current device session while keeping the Web server alive."""
+
+        with self._condition:
+            self._phase = "setup"
+            self._detail = detail
+            self._pending_setup = None
+            self._snapshot = None
+            self._actions = deque(
+                action for action in self._actions if action == "quit"
+            )
+            self._condition.notify_all()
 
     def publish(self, snapshot: TeleopSnapshot) -> None:
         with self._condition:
