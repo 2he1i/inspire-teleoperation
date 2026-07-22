@@ -268,6 +268,26 @@ def main():
                     elif action == "speed_mode":
                         mode = hand_module.toggle_speed_mode()
                         logger_mp.info("Switched to %s joint speed mode.", mode)
+                    elif action == "calibrate_force":
+                        if state.tracking_enabled:
+                            state.apply_action("pause")
+                            runtime.set_enabled(False)
+                        web_ui.set_calibration_state("running")
+                        try:
+                            calibrated_sides = hand_module.calibrate_force_sensors()
+                        except Exception as error:
+                            web_ui.set_calibration_state("failed", str(error))
+                            logger_mp.exception(
+                                "Force-sensor calibration failed: %s", error
+                            )
+                        else:
+                            calibrated = ", ".join(calibrated_sides)
+                            web_ui.set_calibration_state("completed", calibrated)
+                            logger_mp.info(
+                                "Force-sensor calibration completed for: %s; "
+                                "unloaded force readings are stable.",
+                                calibrated,
+                            )
 
                     try:
                         runtime.step()

@@ -197,6 +197,8 @@ input.field-invalid, select.field-invalid { border-color: rgba(255,107,107,.72);
 .control-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 7px; }
 .secondary-button { border: 1px solid var(--line-strong); background: var(--surface-raised); }
 .secondary-button:hover { background: #20262d; }
+.calibration-button { border-color: color-mix(in srgb, var(--accent) 28%, var(--line-strong)); }
+.calibration-button:hover { border-color: color-mix(in srgb, var(--accent) 48%, var(--line-strong)); }
 .run-button { border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 52%, #182018); color: #fff; }
 .run-button:hover { filter: brightness(1.1); }
 .run-button.stop-button { border-color: #8b713a; background: #4d3d21; color: #f5d693; }
@@ -358,9 +360,13 @@ dialog::backdrop { background: rgba(3,5,7,.78); backdrop-filter: blur(4px); }
 dialog form { padding: 27px; text-align: center; }
 .dialog-icon { width: 39px; height: 39px; display: grid; place-items: center; margin: 0 auto 14px; border: 1px solid #62512b; border-radius: 50%; color: var(--amber); font-size: 1rem; font-weight: 800; }
 .dialog-icon.danger { border-color: #68373c; color: var(--danger); }
+.dialog-icon.success { border-color: color-mix(in srgb, var(--accent) 55%, #304031); color: var(--accent); }
+.dialog-icon.running { color: transparent; }
+.dialog-icon.running::after { content: ""; width: 13px; height: 13px; border: 2px solid #5b5544; border-top-color: var(--amber); border-radius: 50%; animation: tactile-spin .8s linear infinite; }
 dialog h2 { margin: 0; font-size: 1.333rem; }
 dialog p { margin: 10px 0 0; color: #8e98a3; font-size: .833rem; line-height: 1.7; }
 dialog form > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 22px; }
+dialog form > div.single-action { grid-template-columns: 1fr; }
 
 .preferences-dialog { width: min(max(490px, 32rem), calc(100% - 30px)); }
 .preferences-shell { padding: 25px; }

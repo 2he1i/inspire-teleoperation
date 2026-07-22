@@ -151,6 +151,7 @@
             <div><p class="eyebrow" data-i18n="liveEyebrow">实时遥操作</p><h1 data-i18n="dashboardTitle">运行控制台</h1><p data-i18n="dashboardLead">监控连接、数据链路与关节状态。</p></div>
             <div class="control-actions">
               <button id="speed-button" class="secondary-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5l2 2M20 4v5h-5M20 12a8 8 0 0 1-14 5l-2-2M4 20v-5h5"/></svg><span data-i18n="switchSpeed">切换速度</span></button>
+              <button id="force-calibration-button" class="secondary-button calibration-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v3M5.6 5.6l2.1 2.1M3 12h3m12 0h3M6 19h12M8 16a5 5 0 1 1 8 0M12 11l2.5-2.5"/></svg><span data-i18n="calibrateForce">力传感器校准</span></button>
               <button id="tracking-button" class="run-button" type="button"><span class="play-icon"></span><span data-i18n="run">开始跟踪</span></button>
               <button id="disconnect-button" class="danger-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 8 5 12l4 4M5 12h10M15 5h4v14h-4"/></svg><span data-i18n="disconnect">断开设备</span></button>
             </div>
@@ -270,7 +271,7 @@
   </dialog>
 
   <dialog id="confirm-dialog">
-    <form method="dialog"><span class="dialog-icon">!</span><h2 id="dialog-title">确认操作</h2><p id="dialog-copy"></p><div><button value="cancel" class="secondary-button" data-i18n="cancel">取消</button><button id="dialog-confirm" value="confirm" class="run-button" data-i18n="confirm">确认</button></div></form>
+    <form method="dialog"><span class="dialog-icon">!</span><h2 id="dialog-title">确认操作</h2><p id="dialog-copy"></p><div id="dialog-actions"><button id="dialog-cancel" value="cancel" class="secondary-button" data-i18n="cancel">取消</button><button id="dialog-confirm" value="confirm" class="run-button" data-i18n="confirm">确认</button></div></form>
   </dialog>
   <script src="/app.js" defer></script>
 </body>

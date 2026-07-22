@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import math
 import threading
 import time
@@ -26,6 +27,12 @@ JOINT_COUNT = 6
 SPEED_MODES = ("adaptive_v2", "adaptive_v1", "fixed")
 TACTILE_SAMPLE_HZ = 10.0
 MAX_TACTILE_SAMPLE_HZ = 60.0
+FORCE_CALIBRATION_MIN_WAIT_S = 0.5
+FORCE_CALIBRATION_STABLE_WINDOW_S = 0.5
+FORCE_CALIBRATION_POLL_INTERVAL_S = 0.02
+FORCE_CALIBRATION_TIMEOUT_S = 3.0
+FORCE_CALIBRATION_ZERO_LIMIT_G = 5
+FORCE_CALIBRATION_SPAN_LIMIT_G = 2
 
 
 def _normalize_speed_mode(mode: str) -> str:
@@ -368,7 +375,7 @@ class HandController:
         self._stop_event = threading.Event()
         self._control_error: BaseException | None = None
         self._tactile_lock = threading.Lock()
-        self._tactile_wake_event = threading.Event()
+        self._tactile_condition = threading.Condition(self._tactile_lock)
         self._tactile_selection: tuple[str, ...] = ()
         self._tactile_frames: dict[
             str, tuple[float, dict[str, list[list[int]]]]
@@ -397,8 +404,9 @@ class HandController:
             )
             for side, host in hosts.items()
         }
-        # Individual Modbus batches release the client lock so control traffic
-        # can run even at the configured tactile polling rate.
+        # Each hand gets an independent tactile worker and Modbus client. The
+        # batches still release their per-client lock so control traffic for
+        # the same hand can run between tactile requests.
         self._tactile_target_hz = float(tactile_frequency)
 
         try:
@@ -421,12 +429,17 @@ class HandController:
             daemon=True,
         )
         self._control_thread.start()
-        self._tactile_thread = threading.Thread(
-            target=self._tactile_loop,
-            name="hand-modbus-tactile",
-            daemon=True,
-        )
-        self._tactile_thread.start()
+        self._tactile_threads = {
+            side: threading.Thread(
+                target=self._tactile_loop,
+                args=(side,),
+                name=f"hand-modbus-tactile-{side}",
+                daemon=True,
+            )
+            for side in self._hands
+        }
+        for thread in self._tactile_threads.values():
+            thread.start()
         logger_mp.info(
             "Hand Modbus connected in %s-speed mode: %s.",
             speed_mode,
@@ -484,24 +497,75 @@ class HandController:
             )
         return normalized
 
-    def _update_hand_states(self) -> np.ndarray:
-        states = {
-            "left": np.zeros(JOINT_COUNT, dtype=np.float64),
-            "right": np.zeros(JOINT_COUNT, dtype=np.float64),
+    def _read_hand_state(self, side: str) -> np.ndarray:
+        state = np.asarray(
+            self._hands[side].read_actual_angles(), dtype=np.float64
+        )
+        if state.shape != (JOINT_COUNT,):
+            raise RuntimeError(
+                f"Dexhand {side} actual angles must contain "
+                f"{JOINT_COUNT} values, got {state.shape}"
+            )
+        return state / 1000.0
+
+    def _publish_hand_states(self, states: dict[str, np.ndarray]) -> np.ndarray:
+        complete_states = {
+            side: states.get(side, np.zeros(JOINT_COUNT, dtype=np.float64))
+            for side in ("left", "right")
         }
-        for side, hand in self._hands.items():
-            state = np.asarray(hand.read_actual_angles(), dtype=np.float64)
-            if state.shape != (JOINT_COUNT,):
-                raise RuntimeError(
-                    f"Dexhand {side} actual angles must contain "
-                    f"{JOINT_COUNT} values, got {state.shape}"
-                )
-            states[side] = state / 1000.0
         with self.left_hand_state_array.get_lock():
-            self.left_hand_state_array[:] = states["left"]
+            self.left_hand_state_array[:] = complete_states["left"]
         with self.right_hand_state_array.get_lock():
-            self.right_hand_state_array[:] = states["right"]
-        return np.concatenate((states["left"], states["right"]))
+            self.right_hand_state_array[:] = complete_states["right"]
+        return np.concatenate((complete_states["left"], complete_states["right"]))
+
+    def _update_hand_states(self) -> np.ndarray:
+        return self._publish_hand_states(
+            {side: self._read_hand_state(side) for side in self._hands}
+        )
+
+    def _run_hand_cycle(
+        self,
+        side: str,
+        command: list[int] | None,
+        speeds: list[int] | None,
+    ) -> np.ndarray:
+        """Run one hand's ordered Modbus operations in one I/O worker."""
+
+        hand = self._hands[side]
+        if speeds is not None:
+            hand.write_target_speeds(speeds)
+        if command is not None:
+            hand.write_target_angles(command)
+        return self._read_hand_state(side)
+
+    def _run_hand_cycles(
+        self,
+        executor: ThreadPoolExecutor | None,
+        commands: dict[str, list[int]],
+        speed_writes: dict[str, list[int]],
+    ) -> np.ndarray:
+        """Run left/right Modbus cycles concurrently while preserving per-hand order."""
+
+        if executor is None:
+            states = {
+                side: self._run_hand_cycle(
+                    side, commands.get(side), speed_writes.get(side)
+                )
+                for side in self._hands
+            }
+        else:
+            futures = {
+                side: executor.submit(
+                    self._run_hand_cycle,
+                    side,
+                    commands.get(side),
+                    speed_writes.get(side),
+                )
+                for side in self._hands
+            }
+            states = {side: future.result() for side, future in futures.items()}
+        return self._publish_hand_states(states)
 
     def _publish_observation(self, state: np.ndarray, action: np.ndarray) -> None:
         if self._dual_hand_state_array is None or self._dual_hand_action_array is None:
@@ -532,6 +596,86 @@ class HandController:
             self._speed_mode = SPEED_MODES[(index + 1) % len(SPEED_MODES)]
             return self._speed_mode
 
+    def calibrate_force_sensors(self) -> tuple[str, ...]:
+        """Calibrate all hands and wait for a stable unloaded force window."""
+
+        calibrated: list[str] = []
+        failures: list[tuple[str, Exception]] = []
+        with ThreadPoolExecutor(
+            max_workers=len(self._hands),
+            thread_name_prefix="hand-force-calibration",
+        ) as executor:
+            futures = {
+                side: executor.submit(self._calibrate_hand_force_sensors, side)
+                for side in self._hands
+            }
+            for side, future in futures.items():
+                try:
+                    future.result()
+                except Exception as error:
+                    failures.append((side, error))
+                else:
+                    calibrated.append(side)
+        if failures:
+            detail = "; ".join(f"{side}: {error}" for side, error in failures)
+            raise RuntimeError(
+                f"Force-sensor calibration failed ({detail})"
+            ) from failures[0][1]
+        return tuple(calibrated)
+
+    def _calibrate_hand_force_sensors(self, side: str) -> None:
+        """Trigger one hand, then require both minimum wait and stable polling."""
+
+        hand = self._hands[side]
+        started_at = time.monotonic()
+        hand.calibrate_force_sensors()
+        samples: list[tuple[float, np.ndarray]] = []
+        last_forces = np.zeros(JOINT_COUNT, dtype=np.int16)
+        while True:
+            sample_started = time.monotonic()
+            try:
+                forces = np.asarray(hand.read_actual_forces(), dtype=np.int16)
+            except Exception as error:
+                raise RuntimeError(f"could not poll actual forces: {error}") from error
+            if forces.shape != (JOINT_COUNT,):
+                raise RuntimeError(
+                    f"actual forces must contain {JOINT_COUNT} values, "
+                    f"got {forces.shape}"
+                )
+
+            elapsed = time.monotonic() - started_at
+            last_forces = forces.copy()
+            samples.append((elapsed, last_forces))
+            window_start = elapsed - FORCE_CALIBRATION_STABLE_WINDOW_S
+            samples = [sample for sample in samples if sample[0] >= window_start]
+            covers_stable_window = bool(samples) and samples[0][0] <= (
+                window_start + 1.5 * FORCE_CALIBRATION_POLL_INTERVAL_S
+            )
+            if (
+                elapsed >= FORCE_CALIBRATION_MIN_WAIT_S
+                and covers_stable_window
+            ):
+                values = np.stack([sample[1] for sample in samples])
+                stable = (
+                    np.max(np.abs(values)) <= FORCE_CALIBRATION_ZERO_LIMIT_G
+                    and np.max(np.ptp(values, axis=0))
+                    <= FORCE_CALIBRATION_SPAN_LIMIT_G
+                )
+                if stable:
+                    return
+            if elapsed >= FORCE_CALIBRATION_TIMEOUT_S:
+                raise TimeoutError(
+                    "force values did not stabilize within "
+                    f"{FORCE_CALIBRATION_TIMEOUT_S:.1f}s; "
+                    f"last={last_forces.astype(int).tolist()}"
+                )
+
+            remaining = FORCE_CALIBRATION_POLL_INTERVAL_S - (
+                time.monotonic() - sample_started
+            )
+            if remaining > 0:
+                time.sleep(remaining)
+
     def set_tactile_sides(self, sides: Sequence[str]) -> None:
         """Enable command-rate-aware tactile sampling for connected hands."""
 
@@ -541,7 +685,7 @@ class HandController:
         unavailable = [side for side in normalized if side not in self._hands]
         if unavailable:
             raise ValueError(f"tactile hand is not connected: {unavailable[0]}")
-        with self._tactile_lock:
+        with self._tactile_condition:
             self._tactile_selection = normalized
             self._tactile_frames = {
                 side: frame
@@ -563,7 +707,7 @@ class HandController:
                 for side, error in self._tactile_errors.items()
                 if side in normalized
             }
-        self._tactile_wake_event.set()
+            self._tactile_condition.notify_all()
 
     def tactile_snapshot(self) -> dict[str, object]:
         """Return the last completed tactile frames without performing I/O."""
@@ -592,67 +736,73 @@ class HandController:
             "hands": hands,
         }
 
-    def _tactile_loop(self) -> None:
+    def _tactile_loop(self, side: str) -> None:
+        """Read one hand independently so dual-hand sampling runs in parallel."""
+
         sample_period = 1.0 / self._tactile_target_hz
         while not self._stop_event.is_set():
-            with self._tactile_lock:
-                selection = self._tactile_selection
-            if not selection:
-                self._tactile_wake_event.wait(0.5)
-                self._tactile_wake_event.clear()
-                continue
-
-            started_at = time.monotonic()
-            for side in selection:
+            with self._tactile_condition:
+                self._tactile_condition.wait_for(
+                    lambda: self._stop_event.is_set()
+                    or side in self._tactile_selection,
+                    timeout=0.5,
+                )
                 if self._stop_event.is_set():
                     break
-                with self._tactile_lock:
+                if side not in self._tactile_selection:
+                    continue
+
+            started_at = time.monotonic()
+            try:
+                tactile = self._hands[side].read_tactile()
+                regions = {
+                    name: np.asarray(values, dtype=np.uint16).astype(
+                        int, copy=False
+                    ).tolist()
+                    for name, values in tactile.items()
+                }
+            except Exception as error:
+                message = str(error)
+                with self._tactile_condition:
                     if side not in self._tactile_selection:
                         continue
-                try:
-                    tactile = self._hands[side].read_tactile()
-                    regions = {
-                        name: np.asarray(values, dtype=np.uint16).astype(
-                            int, copy=False
-                        ).tolist()
-                        for name, values in tactile.items()
-                    }
-                except Exception as error:
-                    message = str(error)
-                    with self._tactile_lock:
-                        previous = self._tactile_errors.get(side)
-                        self._tactile_errors[side] = message
-                    if previous != message:
-                        logger_mp.warning(
-                            "Could not read %s-hand tactile data: %s", side, error
+                    previous = self._tactile_errors.get(side)
+                    self._tactile_errors[side] = message
+                if previous != message:
+                    logger_mp.warning(
+                        "Could not read %s-hand tactile data: %s", side, error
+                    )
+            else:
+                with self._tactile_condition:
+                    if side in self._tactile_selection:
+                        captured_at = time.monotonic()
+                        previous_frame = self._tactile_frames.get(side)
+                        if previous_frame is not None:
+                            interval = captured_at - previous_frame[0]
+                            if interval > 0:
+                                measured_rate = 1.0 / interval
+                                previous_rate = self._tactile_rates.get(side, 0.0)
+                                self._tactile_rates[side] = (
+                                    measured_rate
+                                    if previous_rate <= 0
+                                    else 0.75 * previous_rate + 0.25 * measured_rate
+                                )
+                        self._tactile_frames[side] = (captured_at, regions)
+                        self._tactile_revisions[side] = (
+                            self._tactile_revisions.get(side, 0) + 1
                         )
-                else:
-                    with self._tactile_lock:
-                        if side in self._tactile_selection:
-                            captured_at = time.monotonic()
-                            previous_frame = self._tactile_frames.get(side)
-                            if previous_frame is not None:
-                                interval = captured_at - previous_frame[0]
-                                if interval > 0:
-                                    measured_rate = 1.0 / interval
-                                    previous_rate = self._tactile_rates.get(side, 0.0)
-                                    self._tactile_rates[side] = (
-                                        measured_rate
-                                        if previous_rate <= 0
-                                        else 0.75 * previous_rate + 0.25 * measured_rate
-                                    )
-                            self._tactile_frames[side] = (
-                                captured_at,
-                                regions,
-                            )
-                            self._tactile_revisions[side] = (
-                                self._tactile_revisions.get(side, 0) + 1
-                            )
-                            self._tactile_errors.pop(side, None)
+                        self._tactile_errors.pop(side, None)
 
-            wait_time = max(0.0, sample_period - (time.monotonic() - started_at))
-            self._tactile_wake_event.wait(wait_time)
-            self._tactile_wake_event.clear()
+            deadline = started_at + sample_period
+            with self._tactile_condition:
+                while (
+                    not self._stop_event.is_set()
+                    and side in self._tactile_selection
+                ):
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    self._tactile_condition.wait(remaining)
 
     def _publish_speeds(self, side: str, speeds: np.ndarray) -> None:
         shared = self.left_hand_speed_array if side == "left" else self.right_hand_speed_array
@@ -678,10 +828,19 @@ class HandController:
         fixed_speeds = np.full(JOINT_COUNT, self._fixed_speed, dtype=int)
         for side in self._hands:
             self._publish_speeds(side, fixed_speeds)
+        executor = (
+            ThreadPoolExecutor(
+                max_workers=len(self._hands),
+                thread_name_prefix="hand-modbus-io",
+            )
+            if len(self._hands) > 1
+            else None
+        )
         try:
             while not self._stop_event.is_set():
                 started_at = time.monotonic()
                 requested_mode = self.speed_mode
+                speed_writes: dict[str, list[int]] = {}
                 if requested_mode != active_mode:
                     active_mode = requested_mode
                     last_written_speeds = {side: None for side in self._hands}
@@ -695,10 +854,9 @@ class HandController:
                             now=now,
                         )
                     if active_mode == "fixed":
-                        for side, hand in self._hands.items():
-                            hand.write_target_speeds(fixed_speeds.tolist())
-                            last_written_speeds[side] = fixed_speeds.copy()
-                            self._publish_speeds(side, fixed_speeds)
+                        speed_writes = {
+                            side: fixed_speeds.tolist() for side in self._hands
+                        }
                     logger_mp.info("Hand speed mode changed to %s.", active_mode)
                 fresh_sides: set[str] = set()
                 if self._consume_motion_data_ready():
@@ -728,7 +886,8 @@ class HandController:
                                 "Ignoring invalid %s-hand target: %s", side, error
                             )
 
-                for side, hand in self._hands.items():
+                commands: dict[str, list[int]] = {}
+                for side in self._hands:
                     if side not in fresh_sides:
                         continue
                     try:
@@ -755,13 +914,16 @@ class HandController:
                         or np.max(np.abs(speeds - previous_speeds))
                         >= speed_config.write_threshold
                     ):
-                        hand.write_target_speeds(speeds.tolist())
-                        last_written_speeds[side] = speeds.copy()
-                        self._publish_speeds(side, speeds)
-                    command = np.rint(targets[side] * 1000).astype(int).tolist()
-                    hand.write_target_angles(command)
+                        speed_writes[side] = speeds.tolist()
+                    commands[side] = (
+                        np.rint(targets[side] * 1000).astype(int).tolist()
+                    )
 
-                state = self._update_hand_states()
+                state = self._run_hand_cycles(executor, commands, speed_writes)
+                for side, speeds in speed_writes.items():
+                    published_speeds = np.asarray(speeds, dtype=int)
+                    last_written_speeds[side] = published_speeds.copy()
+                    self._publish_speeds(side, published_speeds)
                 states["left"] = state[:JOINT_COUNT]
                 states["right"] = state[JOINT_COUNT:]
                 self._publish_observation(
@@ -773,6 +935,9 @@ class HandController:
             self._control_error = error
             self._stop_event.set()
             logger_mp.exception("Hand Modbus control loop stopped due to an error.")
+        finally:
+            if executor is not None:
+                executor.shutdown(wait=True)
 
     def raise_if_failed(self) -> None:
         """Surface an asynchronous control failure in the teleop main thread."""
@@ -784,14 +949,15 @@ class HandController:
         """Stop control, optionally open enabled hands, then close sockets."""
 
         self._stop_event.set()
-        self._tactile_wake_event.set()
+        with self._tactile_condition:
+            self._tactile_condition.notify_all()
         wait_timeout = self._request_timeout + 1.0 if timeout is None else timeout
         threads = [
             thread
-            for thread in (
+            for thread in [
                 getattr(self, "_control_thread", None),
-                getattr(self, "_tactile_thread", None),
-            )
+                *getattr(self, "_tactile_threads", {}).values(),
+            ]
             if thread is not None
         ]
         deadline = time.monotonic() + wait_timeout

@@ -106,6 +106,13 @@ class HandTeleopModule:
             raise RuntimeError("hand module has not been started")
         return self.controller.toggle_speed_mode()
 
+    def calibrate_force_sensors(self) -> tuple[str, ...]:
+        """Calibrate force sensors on all connected hands."""
+
+        if self.controller is None:
+            raise RuntimeError("hand module has not been started")
+        return self.controller.calibrate_force_sensors()
+
     def set_tactile_sides(self, sides: tuple[str, ...]) -> None:
         if self.controller is None:
             raise RuntimeError("hand module has not been started")

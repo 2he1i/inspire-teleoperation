@@ -465,10 +465,15 @@ HandTeleopModule(
 
 ```python
 mode = hands.toggle_speed_mode()
+calibrated = hands.calibrate_force_sensors()
 ```
 
 循环顺序为 `adaptive_v2 -> adaptive_v1 -> fixed -> adaptive_v2`，返回切换后的模式。
-模块未启动时抛出 `RuntimeError`。
+`calibrate_force_sensors()` 向所有已连接手并行下发力传感器校准命令。每只手至少等待
+0.5 秒，并以 50 Hz 检查最近 0.5 秒的实际力：六路绝对值均不超过 5 g、各通道窗口
+极差均不超过 2 g 时完成；即等待时间取固定 0.5 秒与轮询稳定所需时间的较大者。全部
+手通过后返回手部名称元组，3 秒内未稳定则抛出 `TimeoutError` 包装后的
+`RuntimeError`。调用前应移除手部外力和接触物。模块未启动时抛出 `RuntimeError`。
 
 ### 7.3 状态遥测
 
@@ -529,12 +534,18 @@ HandController(
 | `speed_mode` | 线程安全读取当前速度模式 |
 | `set_speed_mode(mode)` | 请求切换到指定模式 |
 | `toggle_speed_mode()` | 循环切换模式并返回新模式 |
+| `calibrate_force_sensors()` | 并行校准所有已连接手，并等待至少 0.5 秒且力值稳定 |
 | `raise_if_failed()` | 控制线程失败时抛出 `RuntimeError`，原异常为 cause |
 | `stop(timeout=None, open_hand=False)` | 停止线程、可选张手、关闭连接 |
 | `left_hand_state_array` 等 | 用于 UI/进程间读取状态、目标速度的共享数组 |
 
 如果提供 `xr_motion_data_sequence_in`，控制线程只消费序号变化的新帧；否则可使用
 `xr_motion_data_ready_in` 的一次性布尔标志；两者都未提供时，每轮都读取关键点。
+
+仅连接一只手时，控制线程直接执行该手的 Modbus 操作。连接双手时，控制器复用两个
+长期 I/O 工作线程，并行执行左右手各自的“写速度、写角度、读实际角度”周期；单手
+内部顺序不变，两个周期都完成后才发布组合状态。这样可将双手网络往返时间由近似相加
+降为取较慢一侧，但这不是硬件时钟级同步，两台设备的实际执行时刻仍可能有少量偏差。
 
 ### 8.2 关节顺序和归一化
 
@@ -884,6 +895,8 @@ TeleopSnapshot(
 | `wait_for_setup()` | 阻塞等待 setup；先收到 quit 时返回 `None` |
 | `submit_action(action)` | 校验动作并放入线程安全队列 |
 | `poll_action()` | 非阻塞取出最早动作；队列为空返回 `None` |
+| `set_calibration_state(state, detail="")` | 发布力校准的排队、运行或终态 |
+| `acknowledge_calibration()` | 用户确认终态后将校准状态恢复为 `idle` |
 | `submit_tactile_selection(sides)` | 选择要低频采集触觉数据的已接入手部 |
 | `poll_tactile_selection()` | 非阻塞取出最新触觉采集选择；无变更返回 `None` |
 | `submit_tactile_capture(payload)` | 开始或停止后台 JSONL 触觉文件采集 |
@@ -954,6 +967,10 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
     "dropped_count": 0,
     "error": ""
   },
+  "calibration": {
+    "state": "running",
+    "detail": ""
+  },
   "messages": []
 }
 ```
@@ -965,7 +982,9 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
 二维整数矩阵，数值范围为 0～4095；`revision` 只在该手完成一帧读取后递增。
 `target_hz` 是当前配置的目标帧率，`sample_hz` 是实际完成帧率的平滑测量值。
 `tactile_capture.state` 使用 `idle`、`recording`、`stopping`、`completed`、
-`stopped` 或 `error`。`messages` 最多保留 300 条去重后的日志。
+`stopped` 或 `error`。`calibration.state` 使用 `idle`、`queued`、`running`、
+`completed` 或 `failed`；终态会一直保留到用户确认。`messages` 最多保留 300 条
+去重后的日志。
 
 ### 10.3 `POST /api/setup`
 
@@ -1027,6 +1046,7 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
 | `run` | 将全局 Teleop 使能设为真 |
 | `pause` | 停止跟踪并停止发布新手部目标，保留最后目标 |
 | `speed_mode` | 循环切换手部速度模式 |
+| `calibrate_force` | 停止跟踪并校准所有已连接手的力传感器 |
 | `disconnect` | 关闭当前设备与 Quest 会话，返回 `setup`，Web 服务保持运行 |
 | `quit` | 关闭当前设备会话和 Web 服务，退出程序 |
 
@@ -1036,7 +1056,22 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
 {"ok": true, "action": "pause"}
 ```
 
-在 `setup` 阶段仅允许 `quit`。未知动作返回 HTTP 400。
+在 `setup` 阶段仅允许 `quit`。`calibrate_force` 仅在 `live` 阶段可用；执行前应确保
+所有手部不受外力，控制台会弹出确认提示并自动停止跟踪。后台会等待至少 0.5 秒且
+力值轮询稳定后记录完成；3 秒未稳定则记录校准失败。未知动作返回 HTTP 400。
+
+校准弹窗贯穿安全确认、校准中和最终结果三个阶段。校准期间不能取消；达到
+`completed` 或 `failed` 后仍保持打开，用户点击“确定”时浏览器调用：
+
+```http
+POST /api/calibration/ack
+Content-Type: application/json
+
+{}
+```
+
+成功后校准状态恢复为 `idle`，弹窗关闭。校准仍为 `queued` 或 `running` 时确认请求
+返回 HTTP 400。
 
 ### 10.5 `POST /api/tactile`
 
@@ -1056,7 +1091,10 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
 停止触觉采样，Web 控制台在离开触觉页时自动提交。完整触觉帧目标频率由连接配置的
 `tactile_frequency` 决定，范围为 1～60 Hz；每帧包含 11 个读取批次，各批次独立
 加锁，让控制指令有机会穿插执行。若设备响应较慢，实际帧率会自然低于目标值，不会
-积压过期读取任务。断开设备后可在 Web 中修改该值并重新连接，无需重启服务。
+积压过期读取任务。选择双手时，控制器会为左右手分别使用长期工作线程和各自的
+Modbus 客户端并行读取；单手内部的 11 个批次仍按协议顺序读取。两只手的完成时间戳
+与修订号相互独立，因此这是低延迟并发采集，不是硬件时钟同步采样。断开设备后可在
+Web 中修改该值并重新连接，无需重启服务。
 选择未接入的手、重复项或在非 `live` 阶段调用会返回 HTTP 400。
 
 ### 10.6 `POST /api/tactile/capture`

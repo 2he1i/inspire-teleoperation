@@ -271,6 +271,9 @@ class _RequestHandler(BaseHTTPRequestHandler):
             elif self.path == "/api/tactile/capture":
                 capture = self.server.web_ui.submit_tactile_capture(payload)
                 self._json(HTTPStatus.ACCEPTED, {"ok": True, "capture": capture})
+            elif self.path == "/api/calibration/ack":
+                calibration = self.server.web_ui.acknowledge_calibration()
+                self._json(HTTPStatus.OK, {"ok": True, "calibration": calibration})
             else:
                 self.send_error(HTTPStatus.NOT_FOUND)
         except (OSError, TypeError, ValueError) as error:
@@ -317,7 +320,14 @@ class HandTeleoperationWebUI:
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
         "/favicon.svg": ("favicon.svg", "image/svg+xml"),
     }
-    _ACTIONS = {"run", "pause", "speed_mode", "disconnect", "quit"}
+    _ACTIONS = {
+        "run",
+        "pause",
+        "speed_mode",
+        "calibrate_force",
+        "disconnect",
+        "quit",
+    }
 
     def __init__(self, args) -> None:
         self.host = args.web_host
@@ -335,6 +345,7 @@ class HandTeleoperationWebUI:
         self._tactile_selection: tuple[str, ...] = ()
         self._pending_tactile_selection: tuple[str, ...] | None = None
         self._tactile_capture: _TactileCaptureSession | None = None
+        self._calibration: dict[str, str] = {"state": "idle", "detail": ""}
         self._server: _WebServer | None = None
         self._thread: threading.Thread | None = None
         self._log_handler = _WebLogHandler(self)
@@ -508,12 +519,25 @@ class HandTeleoperationWebUI:
         with self._condition:
             if self._phase == "setup" and action != "quit":
                 raise ValueError("Connect the hands before sending controls")
-            if action in {"run", "pause", "speed_mode"} and self._phase != "live":
+            if action in {
+                "run",
+                "pause",
+                "speed_mode",
+                "calibrate_force",
+            } and self._phase != "live":
                 raise ValueError("Hand controls are available only while connected")
             if action == "disconnect" and self._phase not in {
                 "connecting", "live", "error"
             }:
                 raise ValueError("There is no active device session to disconnect")
+            if action == "calibrate_force":
+                if self._calibration["state"] in {"queued", "running"}:
+                    raise ValueError("Force-sensor calibration is already running")
+                if self._calibration["state"] in {"completed", "failed"}:
+                    raise ValueError(
+                        "Acknowledge the previous force-sensor calibration result"
+                    )
+                self._calibration = {"state": "queued", "detail": ""}
             self._actions.append(action)
             self._condition.notify_all()
         return action
@@ -521,6 +545,23 @@ class HandTeleoperationWebUI:
     def poll_action(self) -> str | None:
         with self._condition:
             return self._actions.popleft() if self._actions else None
+
+    def set_calibration_state(self, state: str, detail: str = "") -> None:
+        """Publish the asynchronous force-calibration lifecycle to the Web UI."""
+
+        if state not in {"idle", "queued", "running", "completed", "failed"}:
+            raise ValueError(f"Unknown calibration state: {state!r}")
+        with self._condition:
+            self._calibration = {"state": state, "detail": str(detail)}
+
+    def acknowledge_calibration(self) -> dict[str, str]:
+        """Clear a terminal calibration result after explicit user confirmation."""
+
+        with self._condition:
+            if self._calibration["state"] in {"queued", "running"}:
+                raise ValueError("Force-sensor calibration is still running")
+            self._calibration = {"state": "idle", "detail": ""}
+            return dict(self._calibration)
 
     def submit_tactile_selection(self, sides: Any) -> list[str]:
         """Select enabled hands for paced tactile sampling."""
@@ -675,6 +716,7 @@ class HandTeleoperationWebUI:
             self._snapshot = None
             self._tactile_selection = ()
             self._pending_tactile_selection = None
+            self._calibration = {"state": "idle", "detail": ""}
             self._actions = deque(
                 action for action in self._actions if action == "quit"
             )
@@ -718,5 +760,6 @@ class HandTeleoperationWebUI:
                     if self._tactile_capture is None
                     else self._tactile_capture.status()
                 ),
+                "calibration": dict(self._calibration),
                 "messages": list(self._messages),
             }
