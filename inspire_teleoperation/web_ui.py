@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
+import queue
 import threading
+import time
 import webbrowser
 from collections import deque
 from dataclasses import asdict, dataclass, field
+from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -32,6 +35,7 @@ class TeleopSnapshot:
     left_speed: tuple[float, ...] = ()
     right_speed: tuple[float, ...] = ()
     modules: dict[str, dict[str, Any]] = field(default_factory=dict)
+    tactile: dict[str, Any] = field(default_factory=dict)
 
 
 class _WebLogHandler(logging.Handler):
@@ -53,6 +57,182 @@ class _WebServer(ThreadingHTTPServer):
     def __init__(self, server_address, handler, web_ui: "HandTeleoperationWebUI") -> None:
         self.web_ui = web_ui
         super().__init__(server_address, handler)
+
+
+class _TactileCaptureSession:
+    """Pace tactile snapshots and stream them to a JSON Lines file."""
+
+    FORMAT_NAME = "inspire-tactile-jsonl"
+    FORMAT_VERSION = 1
+
+    def __init__(
+        self,
+        *,
+        path: Path,
+        sides: tuple[str, ...],
+        frequency_hz: float,
+        duration_seconds: float,
+    ) -> None:
+        self.path = path
+        self.sides = sides
+        self.frequency_hz = frequency_hz
+        self.duration_seconds = duration_seconds
+        self._lock = threading.Lock()
+        self._records: queue.Queue[dict[str, Any]] = queue.Queue(
+            maxsize=max(64, int(frequency_hz * 4))
+        )
+        self._started_monotonic = time.monotonic()
+        self._started_at = datetime.now().astimezone()
+        self._deadline = self._started_monotonic + duration_seconds
+        self._next_sample_at = self._started_monotonic
+        self._last_revisions: tuple[int, ...] | None = None
+        self._enqueued_count = 0
+        self._sample_count = 0
+        self._dropped_count = 0
+        self._state = "recording"
+        self._error = ""
+        self._stop_reason = ""
+        self._file = path.open("x", encoding="utf-8", buffering=1)
+        self._thread = threading.Thread(
+            target=self._write_loop,
+            name="tactile-jsonl-writer",
+            daemon=True,
+        )
+        self._thread.start()
+
+    @property
+    def active(self) -> bool:
+        with self._lock:
+            return self._state in {"recording", "stopping"}
+
+    def enqueue(self, tactile: dict[str, Any]) -> None:
+        now = time.monotonic()
+        hands = tactile.get("hands", {}) if isinstance(tactile, dict) else {}
+        with self._lock:
+            if self._state != "recording" or now >= self._deadline:
+                return
+            selected = [hands.get(side, {}) for side in self.sides]
+            if any(not hand.get("regions") for hand in selected):
+                return
+            revisions = tuple(int(hand.get("revision", 0)) for hand in selected)
+            if revisions == self._last_revisions or now < self._next_sample_at:
+                return
+            sequence = self._enqueued_count
+            self._enqueued_count += 1
+            self._last_revisions = revisions
+            self._next_sample_at = now + 1.0 / self.frequency_hz
+            record = {
+                "type": "sample",
+                "sequence": sequence,
+                "captured_at": datetime.now().astimezone().isoformat(
+                    timespec="milliseconds"
+                ),
+                "elapsed_seconds": round(now - self._started_monotonic, 6),
+                "hands": {
+                    side: {
+                        "revision": revisions[index],
+                        "regions": selected[index]["regions"],
+                    }
+                    for index, side in enumerate(self.sides)
+                },
+            }
+        try:
+            self._records.put_nowait(record)
+        except queue.Full:
+            with self._lock:
+                self._dropped_count += 1
+
+    def stop(self, reason: str = "") -> None:
+        with self._lock:
+            if self._state != "recording":
+                return
+            self._state = "stopping"
+            self._stop_reason = reason
+
+    def join(self, timeout: float = 2.0) -> None:
+        self._thread.join(timeout)
+
+    def status(self) -> dict[str, Any]:
+        now = time.monotonic()
+        with self._lock:
+            state = self._state
+            elapsed = max(0.0, now - self._started_monotonic)
+            if state not in {"recording", "stopping"}:
+                elapsed = min(elapsed, self.duration_seconds)
+            return {
+                "state": state,
+                "format": self.FORMAT_NAME,
+                "format_version": self.FORMAT_VERSION,
+                "path": str(self.path),
+                "sides": list(self.sides),
+                "frequency_hz": self.frequency_hz,
+                "duration_seconds": self.duration_seconds,
+                "elapsed_seconds": min(elapsed, self.duration_seconds),
+                "remaining_seconds": max(0.0, self.duration_seconds - elapsed),
+                "sample_count": self._sample_count,
+                "dropped_count": self._dropped_count,
+                "error": self._error,
+                "stop_reason": self._stop_reason,
+            }
+
+    def _write_loop(self) -> None:
+        final_state = "completed"
+        try:
+            metadata = {
+                "type": "metadata",
+                "format": self.FORMAT_NAME,
+                "version": self.FORMAT_VERSION,
+                "started_at": self._started_at.isoformat(timespec="milliseconds"),
+                "frequency_hz": self.frequency_hz,
+                "duration_seconds": self.duration_seconds,
+                "sides": list(self.sides),
+                "value_range": [0, 4095],
+            }
+            self._file.write(json.dumps(metadata, ensure_ascii=False) + "\n")
+            while True:
+                now = time.monotonic()
+                with self._lock:
+                    stopping = self._state == "stopping"
+                expired = now >= self._deadline
+                if (stopping or expired) and self._records.empty():
+                    final_state = "stopped" if stopping else "completed"
+                    break
+                try:
+                    record = self._records.get(
+                        timeout=max(0.01, min(0.2, self._deadline - now))
+                    )
+                except queue.Empty:
+                    continue
+                self._file.write(json.dumps(record, ensure_ascii=False) + "\n")
+                with self._lock:
+                    self._sample_count += 1
+            with self._lock:
+                summary = {
+                    "type": "summary",
+                    "ended_at": datetime.now().astimezone().isoformat(
+                        timespec="milliseconds"
+                    ),
+                    "state": final_state,
+                    "sample_count": self._sample_count,
+                    "dropped_count": self._dropped_count,
+                    "stop_reason": self._stop_reason,
+                }
+            self._file.write(json.dumps(summary, ensure_ascii=False) + "\n")
+        except Exception as error:
+            final_state = "error"
+            with self._lock:
+                self._error = str(error)
+        finally:
+            try:
+                self._file.flush()
+                self._file.close()
+            except Exception as error:
+                final_state = "error"
+                with self._lock:
+                    if not self._error:
+                        self._error = str(error)
+            with self._lock:
+                self._state = final_state
 
 
 class _RequestHandler(BaseHTTPRequestHandler):
@@ -83,9 +263,17 @@ class _RequestHandler(BaseHTTPRequestHandler):
             elif self.path == "/api/action":
                 action = self.server.web_ui.submit_action(payload.get("action"))
                 self._json(HTTPStatus.ACCEPTED, {"ok": True, "action": action})
+            elif self.path == "/api/tactile":
+                sides = self.server.web_ui.submit_tactile_selection(
+                    payload.get("sides")
+                )
+                self._json(HTTPStatus.ACCEPTED, {"ok": True, "sides": sides})
+            elif self.path == "/api/tactile/capture":
+                capture = self.server.web_ui.submit_tactile_capture(payload)
+                self._json(HTTPStatus.ACCEPTED, {"ok": True, "capture": capture})
             else:
                 self.send_error(HTTPStatus.NOT_FOUND)
-        except (TypeError, ValueError) as error:
+        except (OSError, TypeError, ValueError) as error:
             self._json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
 
     def _read_json(self) -> dict[str, Any]:
@@ -127,6 +315,7 @@ class HandTeleoperationWebUI:
         "/index.html": ("index.html", "text/html; charset=utf-8"),
         "/app.css": ("app.css", "text/css; charset=utf-8"),
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+        "/favicon.svg": ("favicon.svg", "image/svg+xml"),
     }
     _ACTIONS = {"run", "pause", "speed_mode", "disconnect", "quit"}
 
@@ -141,8 +330,11 @@ class HandTeleoperationWebUI:
         self._setup_config = self._config_from_args(args)
         self._pending_setup: dict[str, Any] | None = None
         self._actions: deque[str] = deque()
-        self._messages: deque[dict[str, str]] = deque(maxlen=80)
+        self._messages: deque[dict[str, str]] = deque(maxlen=300)
         self._snapshot: TeleopSnapshot | None = None
+        self._tactile_selection: tuple[str, ...] = ()
+        self._pending_tactile_selection: tuple[str, ...] | None = None
+        self._tactile_capture: _TactileCaptureSession | None = None
         self._server: _WebServer | None = None
         self._thread: threading.Thread | None = None
         self._log_handler = _WebLogHandler(self)
@@ -163,6 +355,7 @@ class HandTeleoperationWebUI:
             "speed_mode": speed_mode,
             "frequency": args.frequency,
             "hand_frequency": args.hand_frequency,
+            "tactile_frequency": args.tactile_frequency,
             "start": args.start,
             "open_on_exit": args.open_on_exit,
             "hide_hand_markers": args.hide_hand_markers,
@@ -188,6 +381,7 @@ class HandTeleoperationWebUI:
 
     def stop(self) -> None:
         logging.getLogger().removeHandler(self._log_handler)
+        self._stop_tactile_capture("Control service stopped")
         if self._server is not None:
             self._server.shutdown()
             self._server.server_close()
@@ -209,6 +403,7 @@ class HandTeleoperationWebUI:
             "left_enabled", "left_host", "left_device_id", "right_enabled",
             "right_host", "right_device_id", "modbus_port", "modbus_timeout",
             "target_speed", "speed_mode", "frequency", "hand_frequency",
+            "tactile_frequency",
             "start", "open_on_exit", "hide_hand_markers", "safety_confirmed",
         }
         missing = required.difference(payload)
@@ -258,12 +453,23 @@ class HandTeleoperationWebUI:
             raise ValueError(
                 "speed_mode must be adaptive_v2, adaptive_v1, adaptive, or fixed"
             )
+        left_host = host("left_host", left_enabled)
+        right_host = host("right_host", right_enabled)
+        if (
+            left_enabled
+            and right_enabled
+            and left_host.casefold() == right_host.casefold()
+        ):
+            raise ValueError("Left and right hands must use different host addresses")
+        tactile_frequency = number("tactile_frequency")
+        if tactile_frequency > 60:
+            raise ValueError("tactile_frequency must be in the range 1..60")
         return {
             "left_enabled": left_enabled,
-            "left_host": host("left_host", left_enabled),
+            "left_host": left_host,
             "left_device_id": integer("left_device_id", 1, 254),
             "right_enabled": right_enabled,
-            "right_host": host("right_host", right_enabled),
+            "right_host": right_host,
             "right_device_id": integer("right_device_id", 1, 254),
             "modbus_port": integer("modbus_port", 1, 65535),
             "modbus_timeout": number("modbus_timeout"),
@@ -271,6 +477,7 @@ class HandTeleoperationWebUI:
             "speed_mode": speed_mode,
             "frequency": number("frequency"),
             "hand_frequency": number("hand_frequency"),
+            "tactile_frequency": tactile_frequency,
             "start": boolean("start"),
             "open_on_exit": boolean("open_on_exit"),
             "hide_hand_markers": boolean("hide_hand_markers"),
@@ -315,7 +522,144 @@ class HandTeleoperationWebUI:
         with self._condition:
             return self._actions.popleft() if self._actions else None
 
+    def submit_tactile_selection(self, sides: Any) -> list[str]:
+        """Select enabled hands for paced tactile sampling."""
+
+        if not isinstance(sides, list) or any(
+            side not in {"left", "right"} for side in sides
+        ):
+            raise ValueError("sides must be a list containing left and/or right")
+        if len(sides) != len(set(sides)):
+            raise ValueError("sides must not contain duplicates")
+        normalized = tuple(side for side in ("left", "right") if side in sides)
+        with self._condition:
+            if self._phase != "live":
+                raise ValueError("Tactile sampling is available only while connected")
+            available = tuple(
+                side
+                for side in ("left", "right")
+                if self._setup_config[f"{side}_enabled"]
+            )
+            if any(side not in available for side in normalized):
+                raise ValueError("Cannot sample tactile data from a disabled hand")
+            if len(available) == 1 and normalized not in {(), available}:
+                raise ValueError("A single-hand session must display its enabled hand")
+            if (
+                self._tactile_capture is not None
+                and self._tactile_capture.active
+                and normalized != self._tactile_capture.sides
+            ):
+                raise ValueError("Stop tactile capture before changing the selected hands")
+            self._tactile_selection = normalized
+            self._pending_tactile_selection = normalized
+            self._condition.notify_all()
+        return list(normalized)
+
+    def poll_tactile_selection(self) -> tuple[str, ...] | None:
+        with self._condition:
+            selection = self._pending_tactile_selection
+            self._pending_tactile_selection = None
+            return selection
+
+    def submit_tactile_capture(self, payload: dict[str, Any]) -> dict[str, Any]:
+        action = payload.get("action")
+        if action == "stop":
+            capture = self._tactile_capture
+            if capture is None or not capture.active:
+                raise ValueError("There is no active tactile capture")
+            capture.stop("Stopped by user")
+            self.add_message("info", "Tactile capture stop requested.")
+            return capture.status()
+        if action != "start":
+            raise ValueError("Tactile capture action must be start or stop")
+
+        sides = payload.get("sides")
+        if not isinstance(sides, list) or not sides or any(
+            side not in {"left", "right"} for side in sides
+        ):
+            raise ValueError("Capture sides must contain left and/or right")
+        normalized = tuple(side for side in ("left", "right") if side in sides)
+        if len(normalized) != len(sides):
+            raise ValueError("Capture sides must be unique")
+
+        frequency = payload.get("frequency_hz")
+        duration = payload.get("duration_seconds")
+        if isinstance(frequency, bool) or not isinstance(frequency, (int, float)):
+            raise TypeError("Capture frequency must be a number")
+        if isinstance(duration, bool) or not isinstance(duration, (int, float)):
+            raise TypeError("Capture duration must be a number")
+        frequency = float(frequency)
+        duration = float(duration)
+        if not 0 < frequency <= 60:
+            raise ValueError("Capture frequency must be in the range 0..60 Hz")
+        if not 0 < duration <= 86_400:
+            raise ValueError("Capture duration must be in the range 0..86400 seconds")
+
+        output_path = payload.get("output_path")
+        if not isinstance(output_path, str) or not output_path.strip():
+            raise ValueError("Capture output path cannot be empty")
+        if "\x00" in output_path or len(output_path) > 4096:
+            raise ValueError("Capture output path is invalid")
+
+        with self._condition:
+            if self._phase != "live":
+                raise ValueError("Tactile capture is available only while connected")
+            if self._tactile_capture is not None and self._tactile_capture.active:
+                raise ValueError("A tactile capture is already running")
+            available = tuple(
+                side
+                for side in ("left", "right")
+                if self._setup_config[f"{side}_enabled"]
+            )
+            if any(side not in available for side in normalized):
+                raise ValueError("Cannot capture tactile data from a disabled hand")
+            polling_frequency = float(self._setup_config["tactile_frequency"])
+            publication_frequency = float(self._setup_config["frequency"])
+            maximum_frequency = min(polling_frequency, publication_frequency)
+            if frequency > maximum_frequency:
+                raise ValueError(
+                    "Capture frequency cannot exceed the available tactile data rate "
+                    f"({maximum_frequency:g} Hz)"
+                )
+            path = self._capture_output_path(output_path)
+            capture = _TactileCaptureSession(
+                path=path,
+                sides=normalized,
+                frequency_hz=frequency,
+                duration_seconds=duration,
+            )
+            self._tactile_capture = capture
+            self._tactile_selection = normalized
+            self._pending_tactile_selection = normalized
+            self._condition.notify_all()
+        self.add_message("info", f"Tactile capture started: {path}")
+        return capture.status()
+
+    @staticmethod
+    def _capture_output_path(value: str) -> Path:
+        requested = Path(value.strip()).expanduser().resolve()
+        is_directory = value.rstrip().endswith(("/", "\\")) or (
+            requested.exists() and requested.is_dir()
+        ) or not requested.suffix
+        if is_directory:
+            requested.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now().astimezone().strftime("%Y%m%d-%H%M%S-%f")
+            return requested / f"tactile-{stamp}.jsonl"
+        if requested.suffix.lower() != ".jsonl":
+            raise ValueError("Tactile captures must use the .jsonl extension")
+        requested.parent.mkdir(parents=True, exist_ok=True)
+        return requested
+
+    def _stop_tactile_capture(self, reason: str) -> None:
+        capture = self._tactile_capture
+        if capture is None or not capture.active:
+            return
+        capture.stop(reason)
+        capture.join()
+
     def set_phase(self, phase: str, detail: str = "") -> None:
+        if phase != "live":
+            self._stop_tactile_capture("Device session ended")
         with self._condition:
             self._phase = phase
             self._detail = detail
@@ -323,17 +667,23 @@ class HandTeleoperationWebUI:
     def return_to_setup(self, detail: str = "") -> None:
         """End the current device session while keeping the Web server alive."""
 
+        self._stop_tactile_capture("Device session disconnected")
         with self._condition:
             self._phase = "setup"
             self._detail = detail
             self._pending_setup = None
             self._snapshot = None
+            self._tactile_selection = ()
+            self._pending_tactile_selection = None
             self._actions = deque(
                 action for action in self._actions if action == "quit"
             )
             self._condition.notify_all()
 
     def publish(self, snapshot: TeleopSnapshot) -> None:
+        capture = self._tactile_capture
+        if capture is not None and capture.active:
+            capture.enqueue(snapshot.tactile)
         with self._condition:
             self._snapshot = snapshot
 
@@ -341,9 +691,17 @@ class HandTeleoperationWebUI:
         normalized = " ".join(str(message).split())
         if not normalized:
             return
-        item = {"level": level.lower(), "message": normalized}
+        item = {
+            "level": level.lower(),
+            "message": normalized,
+            "time": datetime.now().astimezone().strftime("%H:%M:%S"),
+        }
         with self._condition:
-            if not self._messages or self._messages[-1] != item:
+            previous = self._messages[-1] if self._messages else None
+            if previous is None or (
+                previous["level"] != item["level"]
+                or previous["message"] != item["message"]
+            ):
                 self._messages.append(item)
 
     def state_payload(self) -> dict[str, Any]:
@@ -354,5 +712,11 @@ class HandTeleoperationWebUI:
                 "language": self.language,
                 "config": dict(self._setup_config),
                 "snapshot": asdict(self._snapshot) if self._snapshot is not None else None,
+                "tactile_selection": list(self._tactile_selection),
+                "tactile_capture": (
+                    {"state": "idle"}
+                    if self._tactile_capture is None
+                    else self._tactile_capture.status()
+                ),
                 "messages": list(self._messages),
             }

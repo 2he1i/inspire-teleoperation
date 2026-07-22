@@ -24,6 +24,8 @@ except ModuleNotFoundError:
 logger_mp = logging_mp.getLogger(__name__)
 JOINT_COUNT = 6
 SPEED_MODES = ("adaptive_v2", "adaptive_v1", "fixed")
+TACTILE_SAMPLE_HZ = 10.0
+MAX_TACTILE_SAMPLE_HZ = 60.0
 
 
 def _normalize_speed_mode(mode: str) -> str:
@@ -312,12 +314,15 @@ class HandController:
         target_speed: int = 300,
         speed_mode: str = "adaptive_v2",
         fps: float = 100.0,
+        tactile_frequency: float = TACTILE_SAMPLE_HZ,
         xr_motion_data_ready_in: Value | None = None,
         xr_motion_data_sequence_in: Value | None = None,
         client_factory: Callable[..., "Dexhand"] | None = None,
     ) -> None:
         if fps <= 0:
             raise ValueError("fps must be positive")
+        if not 1 <= tactile_frequency <= MAX_TACTILE_SAMPLE_HZ:
+            raise ValueError("tactile_frequency must be between 1 and 60 Hz")
         if not 0 <= target_speed <= 1000:
             raise ValueError("target_speed must be between 0 and 1000")
         speed_mode = _normalize_speed_mode(speed_mode)
@@ -325,6 +330,12 @@ class HandController:
         hosts = {side: host for side, host in (("left", left_host), ("right", right_host)) if host}
         if not hosts:
             raise ValueError("At least one of left_host and right_host must be configured")
+        if (
+            left_host
+            and right_host
+            and left_host.strip().casefold() == right_host.strip().casefold()
+        ):
+            raise ValueError("left_host and right_host must use different addresses")
 
         if client_factory is None:
             # Keep the protocol client local to this extracted package.
@@ -356,6 +367,15 @@ class HandController:
         )
         self._stop_event = threading.Event()
         self._control_error: BaseException | None = None
+        self._tactile_lock = threading.Lock()
+        self._tactile_wake_event = threading.Event()
+        self._tactile_selection: tuple[str, ...] = ()
+        self._tactile_frames: dict[
+            str, tuple[float, dict[str, list[list[int]]]]
+        ] = {}
+        self._tactile_revisions: dict[str, int] = {}
+        self._tactile_rates: dict[str, float] = {}
+        self._tactile_errors: dict[str, str] = {}
         # Retargeting brings in the URDF/kinematics stack.  Load it only when
         # an actual hand controller is constructed so the public API, speed
         # planners, arm-only applications, and --help stay lightweight.
@@ -377,6 +397,9 @@ class HandController:
             )
             for side, host in hosts.items()
         }
+        # Individual Modbus batches release the client lock so control traffic
+        # can run even at the configured tactile polling rate.
+        self._tactile_target_hz = float(tactile_frequency)
 
         try:
             for hand in self._hands.values():
@@ -398,6 +421,12 @@ class HandController:
             daemon=True,
         )
         self._control_thread.start()
+        self._tactile_thread = threading.Thread(
+            target=self._tactile_loop,
+            name="hand-modbus-tactile",
+            daemon=True,
+        )
+        self._tactile_thread.start()
         logger_mp.info(
             "Hand Modbus connected in %s-speed mode: %s.",
             speed_mode,
@@ -502,6 +531,128 @@ class HandController:
             index = SPEED_MODES.index(self._speed_mode)
             self._speed_mode = SPEED_MODES[(index + 1) % len(SPEED_MODES)]
             return self._speed_mode
+
+    def set_tactile_sides(self, sides: Sequence[str]) -> None:
+        """Enable command-rate-aware tactile sampling for connected hands."""
+
+        normalized = tuple(side for side in ("left", "right") if side in sides)
+        if len(normalized) != len(tuple(sides)):
+            raise ValueError("tactile sides must be unique connected hand names")
+        unavailable = [side for side in normalized if side not in self._hands]
+        if unavailable:
+            raise ValueError(f"tactile hand is not connected: {unavailable[0]}")
+        with self._tactile_lock:
+            self._tactile_selection = normalized
+            self._tactile_frames = {
+                side: frame
+                for side, frame in self._tactile_frames.items()
+                if side in normalized
+            }
+            self._tactile_revisions = {
+                side: revision
+                for side, revision in self._tactile_revisions.items()
+                if side in normalized
+            }
+            self._tactile_rates = {
+                side: rate
+                for side, rate in self._tactile_rates.items()
+                if side in normalized
+            }
+            self._tactile_errors = {
+                side: error
+                for side, error in self._tactile_errors.items()
+                if side in normalized
+            }
+        self._tactile_wake_event.set()
+
+    def tactile_snapshot(self) -> dict[str, object]:
+        """Return the last completed tactile frames without performing I/O."""
+
+        now = time.monotonic()
+        with self._tactile_lock:
+            selection = self._tactile_selection
+            measured_rates = [
+                self._tactile_rates[side]
+                for side in selection
+                if self._tactile_rates.get(side, 0.0) > 0
+            ]
+            hands: dict[str, object] = {}
+            for side in selection:
+                frame = self._tactile_frames.get(side)
+                hands[side] = {
+                    "regions": {} if frame is None else frame[1],
+                    "age_seconds": None if frame is None else max(0.0, now - frame[0]),
+                    "revision": self._tactile_revisions.get(side, 0),
+                    "error": self._tactile_errors.get(side, ""),
+                }
+        return {
+            "sample_hz": min(measured_rates, default=self._tactile_target_hz),
+            "target_hz": self._tactile_target_hz,
+            "selection": list(selection),
+            "hands": hands,
+        }
+
+    def _tactile_loop(self) -> None:
+        sample_period = 1.0 / self._tactile_target_hz
+        while not self._stop_event.is_set():
+            with self._tactile_lock:
+                selection = self._tactile_selection
+            if not selection:
+                self._tactile_wake_event.wait(0.5)
+                self._tactile_wake_event.clear()
+                continue
+
+            started_at = time.monotonic()
+            for side in selection:
+                if self._stop_event.is_set():
+                    break
+                with self._tactile_lock:
+                    if side not in self._tactile_selection:
+                        continue
+                try:
+                    tactile = self._hands[side].read_tactile()
+                    regions = {
+                        name: np.asarray(values, dtype=np.uint16).astype(
+                            int, copy=False
+                        ).tolist()
+                        for name, values in tactile.items()
+                    }
+                except Exception as error:
+                    message = str(error)
+                    with self._tactile_lock:
+                        previous = self._tactile_errors.get(side)
+                        self._tactile_errors[side] = message
+                    if previous != message:
+                        logger_mp.warning(
+                            "Could not read %s-hand tactile data: %s", side, error
+                        )
+                else:
+                    with self._tactile_lock:
+                        if side in self._tactile_selection:
+                            captured_at = time.monotonic()
+                            previous_frame = self._tactile_frames.get(side)
+                            if previous_frame is not None:
+                                interval = captured_at - previous_frame[0]
+                                if interval > 0:
+                                    measured_rate = 1.0 / interval
+                                    previous_rate = self._tactile_rates.get(side, 0.0)
+                                    self._tactile_rates[side] = (
+                                        measured_rate
+                                        if previous_rate <= 0
+                                        else 0.75 * previous_rate + 0.25 * measured_rate
+                                    )
+                            self._tactile_frames[side] = (
+                                captured_at,
+                                regions,
+                            )
+                            self._tactile_revisions[side] = (
+                                self._tactile_revisions.get(side, 0) + 1
+                            )
+                            self._tactile_errors.pop(side, None)
+
+            wait_time = max(0.0, sample_period - (time.monotonic() - started_at))
+            self._tactile_wake_event.wait(wait_time)
+            self._tactile_wake_event.clear()
 
     def _publish_speeds(self, side: str, speeds: np.ndarray) -> None:
         shared = self.left_hand_speed_array if side == "left" else self.right_hand_speed_array
@@ -633,22 +784,37 @@ class HandController:
         """Stop control, optionally open enabled hands, then close sockets."""
 
         self._stop_event.set()
-        thread = getattr(self, "_control_thread", None)
-        if thread is not None:
-            thread.join(self._request_timeout + 1.0 if timeout is None else timeout)
-            if thread.is_alive():
-                # Closing the sockets interrupts a pending Modbus request.  Do
-                # not send an optional open command while the control thread
-                # may still write the previous target.
-                logger_mp.warning(
-                    "Hand Modbus control thread did not stop in time; "
-                    "closing its connections without sending an open command."
-                )
-                self._close_hands()
+        self._tactile_wake_event.set()
+        wait_timeout = self._request_timeout + 1.0 if timeout is None else timeout
+        threads = [
+            thread
+            for thread in (
+                getattr(self, "_control_thread", None),
+                getattr(self, "_tactile_thread", None),
+            )
+            if thread is not None
+        ]
+        deadline = time.monotonic() + wait_timeout
+        for thread in threads:
+            thread.join(max(0.0, deadline - time.monotonic()))
+        alive = [thread for thread in threads if thread.is_alive()]
+        if alive:
+            # Closing the sockets interrupts pending Modbus requests. Do not
+            # send an optional open command while either worker may still use
+            # the same clients.
+            logger_mp.warning(
+                "Hand Modbus worker did not stop in time; closing its "
+                "connections without sending an open command."
+            )
+            self._close_hands()
+            for thread in alive:
                 thread.join(1.0)
                 if thread.is_alive():
-                    logger_mp.error("Hand Modbus control thread is still running after socket close.")
-                return
+                    logger_mp.error(
+                        "Hand Modbus worker %s is still running after socket close.",
+                        thread.name,
+                    )
+            return
         try:
             if open_hand:
                 for hand in self._hands.values():

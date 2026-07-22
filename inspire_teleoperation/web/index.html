@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0b0d10">
   <title>Hand Teleoperation · Inspire Control</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
@@ -27,6 +28,10 @@
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg>
           <span data-i18n="dashboard">实时控制</span>
         </button>
+        <button class="nav-item" type="button" data-nav="tactile" disabled>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+          <span data-i18n="tactile">触觉反馈</span>
+        </button>
         <button class="nav-item" type="button" data-nav="logs" disabled>
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>
           <span data-i18n="systemLog">系统日志</span>
@@ -38,11 +43,14 @@
       </nav>
 
       <div class="sidebar-footer">
-        <div class="system-state">
-          <span id="connection-dot" class="status-dot"></span>
-          <span><small data-i18n="systemState">系统状态</small><strong id="connection-label">等待配置</strong></span>
+        <button id="shutdown-button" class="sidebar-shutdown" type="button" aria-disabled="false"><span class="sidebar-row-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></span><span data-i18n="shutdownService">关闭控制服务</span></button>
+        <div class="sidebar-status-row">
+          <div class="system-state">
+            <span class="sidebar-row-icon"><span id="connection-dot" class="status-dot"></span></span>
+            <span><small data-i18n="systemState">系统状态</small><strong id="connection-label">等待配置</strong></span>
+          </div>
+          <button id="language-button" class="language-button" type="button" aria-label="Switch language">EN</button>
         </div>
-        <button id="language-button" class="language-button" type="button" aria-label="Switch language">EN</button>
       </div>
     </aside>
 
@@ -103,6 +111,7 @@
                   <label id="fixed-speed-field"><span data-i18n="fixedSpeed">固定速度</span><input name="target_speed" type="number" min="0" max="1000" required><small data-i18n="fixedSpeedHint">仅固定模式生效</small></label>
                   <label><span data-i18n="questRate">Quest 采样率</span><div class="input-unit"><input name="frequency" type="number" min="1" step="1" required><b>Hz</b></div></label>
                   <label><span data-i18n="handRate">手部指令率</span><div class="input-unit"><input name="hand_frequency" type="number" min="1" step="1" required><b>Hz</b></div></label>
+                  <label><span data-i18n="tactileRateSetting">触觉轮询率</span><div class="input-unit"><input name="tactile_frequency" type="number" min="1" max="60" step="1" required><b>Hz</b></div><small data-i18n="tactileRateHint">范围 1–60 Hz，仅在触觉页采集</small></label>
                   <label><span data-i18n="port">Modbus 端口</span><input name="modbus_port" type="number" min="1" max="65535" required></label>
                   <label><span data-i18n="timeout">请求超时</span><div class="input-unit"><input name="modbus_timeout" type="number" min="0.1" step="0.1" required><b>s</b></div></label>
                 </div>
@@ -166,11 +175,73 @@
             </article>
           </div>
 
-          <article id="log-panel" class="log-panel console-card">
-            <div class="panel-heading"><div><span class="terminal-icon">›_</span><span><h2 data-i18n="systemLog">系统日志</h2><small data-i18n="latestEvents">最新运行事件</small></span></div><button id="clear-log" class="text-button" type="button" data-i18n="clear">清空</button></div>
+          <article class="log-panel log-preview-panel console-card">
+            <div class="panel-heading"><div><span class="terminal-icon">›_</span><span><h2 data-i18n="systemLog">系统日志</h2><small data-i18n="latestEvents">最新运行事件</small></span></div><button id="view-all-logs" class="text-button text-button-with-arrow" type="button"><span data-i18n="viewAllLogs">查看全部</span><span aria-hidden="true">→</span></button></div>
             <div class="log-table-heading"><span data-i18n="level">级别</span><span data-i18n="event">事件</span></div>
-            <div id="log-list" class="log-list" aria-live="polite"></div>
+            <div id="log-preview-list" class="log-list log-preview-list" aria-live="polite"></div>
           </article>
+        </section>
+
+        <section id="logs-view" class="logs-view page-view" hidden>
+          <div class="dashboard-heading logs-heading">
+            <div><p class="eyebrow" data-i18n="logsEyebrow">运行记录</p><h1 data-i18n="systemLog">系统日志</h1><p data-i18n="logsLead">查看当前控制会话的完整运行事件。</p></div>
+            <div class="log-page-actions">
+              <span class="log-total"><strong id="log-count">0</strong><span data-i18n="logEntries">条记录</span></span>
+              <button id="clear-log" class="secondary-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg><span data-i18n="clearLogs">清空日志</span></button>
+            </div>
+          </div>
+          <article id="log-panel" class="log-panel detailed-log-panel console-card">
+            <div class="panel-heading"><div><span class="terminal-icon">›_</span><span><h2 data-i18n="currentSession">当前会话</h2><small data-i18n="realtimeUpdates">日志实时更新</small></span></div><span class="live-log-indicator"><i></i><span data-i18n="liveUpdate">实时</span></span></div>
+            <div class="log-table-heading detailed"><span data-i18n="time">时间</span><span data-i18n="level">级别</span><span data-i18n="event">事件</span></div>
+            <div id="log-list" class="log-list detailed-log-list" aria-live="polite"></div>
+          </article>
+        </section>
+
+        <section id="tactile-view" class="tactile-view page-view" hidden>
+          <div class="dashboard-heading tactile-heading">
+            <div>
+              <p class="eyebrow" data-i18n="tactileEyebrow">触觉反馈</p>
+              <h1 data-i18n="tactileTitle">触觉热力图</h1>
+              <p data-i18n="tactileLead">查看每个触觉区域的压力分布，悬停方格可读取精确数值。</p>
+            </div>
+            <div>
+              <div id="tactile-side-selector" class="segmented-control" role="group" aria-label="触觉显示手部">
+                <button type="button" data-tactile-sides="left" data-i18n="leftHand">左手</button>
+                <button type="button" data-tactile-sides="left,right" data-i18n="bothHands">双手</button>
+                <button type="button" data-tactile-sides="right" data-i18n="rightHand">右手</button>
+              </div>
+            </div>
+          </div>
+
+          <section class="tactile-toolbar console-card">
+            <div class="tactile-live-state"><span class="status-dot"></span><span><small data-i18n="tactileStatus">采集状态</small><strong id="tactile-status" data-i18n="waitingTactile">等待首帧</strong></span></div>
+            <div class="heat-legend" aria-label="触觉数值热力范围"><span>0</span><i></i><span>4095</span></div>
+            <div class="tactile-rate"><span data-i18n="sampleRate">采样频率</span><strong id="tactile-rate">--</strong></div>
+          </section>
+
+          <section class="tactile-capture-panel console-card">
+            <header class="tactile-capture-heading">
+              <div><span class="capture-icon" aria-hidden="true"><i></i></span><span><h2 data-i18n="captureTitle">触觉信息采集</h2><p data-i18n="captureLead">按指定频率将当前所选手部的触觉帧流式写入文件</p></span></div>
+              <span id="capture-state" class="capture-state" data-state="idle"><i></i><span data-i18n="captureIdle">未开始</span></span>
+            </header>
+            <form id="tactile-capture-form" class="tactile-capture-form">
+              <label><span data-i18n="captureFrequency">采集频率</span><div class="input-unit"><input name="capture_frequency" type="number" min="0.1" max="60" step="0.1" value="10" required><b>Hz</b></div><small id="capture-frequency-hint" data-i18n="captureFrequencyHint">不得高于当前触觉数据率</small></label>
+              <label><span data-i18n="captureDuration">采集时间</span><div class="input-unit"><input name="capture_duration" type="number" min="0.1" max="86400" step="0.1" value="10" required><b>s</b></div><small data-i18n="captureDurationHint">最长 24 小时</small></label>
+              <label class="capture-path-field"><span data-i18n="captureOutput">输出路径</span><input name="capture_output" type="text" value="tactile_captures" autocomplete="off" spellcheck="false" required><small data-i18n="captureOutputHint">可填写目录或以 .jsonl 结尾的文件路径</small></label>
+              <div class="capture-format"><span data-i18n="captureFormat">输出格式</span><strong>JSONL <small>v1</small></strong><small data-i18n="captureFormatHint">每行一帧，支持流式读取</small></div>
+              <button id="capture-start" class="run-button" type="submit"><span class="record-icon"></span><span data-i18n="captureStart">开始采集</span></button>
+              <button id="capture-stop" class="danger-button" type="button" hidden><span class="stop-icon"></span><span data-i18n="captureStop">停止采集</span></button>
+            </form>
+            <div class="capture-progress" aria-live="polite">
+              <div><span id="capture-progress-label" data-i18n="captureWaiting">等待开始采集</span><strong><b id="capture-sample-count">0</b> <span data-i18n="captureSamples">帧</span></strong></div>
+              <div class="capture-progress-track"><i id="capture-progress-bar"></i></div>
+              <p id="capture-result"></p>
+              <p id="capture-error" class="capture-error" role="alert"></p>
+            </div>
+          </section>
+
+          <div id="tactile-hands" class="tactile-hands" aria-live="polite"></div>
+          <div id="tactile-tooltip" class="tactile-tooltip" role="tooltip" hidden></div>
         </section>
       </main>
     </div>
@@ -194,7 +265,7 @@
           <label class="custom-color"><input id="custom-color-input" type="color" value="#a7f432"><span data-i18n="customColor">自定义</span></label>
         </div>
       </section>
-      <footer><button id="preferences-reset" class="text-button" type="button" data-i18n="resetAppearance">恢复默认</button><button id="shutdown-button" class="shutdown-link" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0"/></svg><span data-i18n="shutdownService">关闭控制服务</span></button></footer>
+      <footer><button id="preferences-reset" class="text-button" type="button" data-i18n="resetAppearance">恢复默认</button></footer>
     </div>
   </dialog>
 

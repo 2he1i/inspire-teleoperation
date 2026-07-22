@@ -75,6 +75,12 @@ def parse_args(argv=None):
     )
     parser.add_argument("--frequency", type=float, default=60.0, help="Quest landmark polling rate in Hz (default: 60).")
     parser.add_argument("--hand-frequency", type=float, default=100.0, help="hand command rate in Hz (default: 100).")
+    parser.add_argument(
+        "--tactile-frequency",
+        type=float,
+        default=10.0,
+        help="tactile polling rate in Hz, 1-60 (default: 10).",
+    )
     parser.add_argument("--left-hand-host", help="Enable the left hand at this Modbus TCP address.")
     parser.add_argument(
         "--right-hand-host",
@@ -130,6 +136,8 @@ def parse_args(argv=None):
         parser.error("At least one hand host must be configured.")
     if args.frequency <= 0 or args.hand_frequency <= 0:
         parser.error("--frequency and --hand-frequency must be positive.")
+    if not 1 <= args.tactile_frequency <= 60:
+        parser.error("--tactile-frequency must be in the range 1-60.")
     if args.image_width <= 0 or args.image_height <= 0:
         parser.error("--image-width and --image-height must be positive.")
     if not 1 <= args.modbus_port <= 65535:
@@ -152,8 +160,8 @@ def _apply_web_config(args, config):
     args.right_hand_host = config["right_host"] if config["right_enabled"] else None
     for name in (
         "left_device_id", "right_device_id", "modbus_port", "modbus_timeout",
-        "target_speed", "speed_mode", "frequency", "hand_frequency", "start",
-        "open_on_exit", "hide_hand_markers",
+        "target_speed", "speed_mode", "frequency", "hand_frequency",
+        "tactile_frequency", "start", "open_on_exit", "hide_hand_markers",
     ):
         setattr(args, name, config[name])
 
@@ -206,6 +214,7 @@ def main():
                     target_speed=args.target_speed,
                     speed_mode=args.speed_mode,
                     fps=args.hand_frequency,
+                    tactile_frequency=args.tactile_frequency,
                 )
                 runtime = TeleopRuntime(source, [hand_module])
                 runtime.set_enabled(state.tracking_enabled)
@@ -236,6 +245,9 @@ def main():
 
                 while state.running and session_active:
                     cycle_start = time.monotonic()
+                    tactile_selection = web_ui.poll_tactile_selection()
+                    if tactile_selection is not None:
+                        hand_module.set_tactile_sides(tactile_selection)
                     action = web_ui.poll_action()
                     if action == "run":
                         state.apply_action("run")
@@ -299,6 +311,7 @@ def main():
                                 }
                                 for name, status in module_statuses.items()
                             },
+                            tactile=telemetry["tactile"],
                         )
                     )
 

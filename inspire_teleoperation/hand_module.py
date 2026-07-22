@@ -106,10 +106,16 @@ class HandTeleopModule:
             raise RuntimeError("hand module has not been started")
         return self.controller.toggle_speed_mode()
 
+    def set_tactile_sides(self, sides: tuple[str, ...]) -> None:
+        if self.controller is None:
+            raise RuntimeError("hand module has not been started")
+        self.controller.set_tactile_sides(sides)
+
     def status(self) -> ModuleStatus:
         if self.controller is None:
             return ModuleStatus(name=self.name, ready=False, detail="not started")
         action = _read_shared(self._action)
+        tactile_snapshot = getattr(self.controller, "tactile_snapshot", None)
         return ModuleStatus(
             name=self.name,
             ready=True,
@@ -124,6 +130,16 @@ class HandTeleopModule:
                 "speed_mode": self.controller.speed_mode,
                 "left_speed": _read_shared(self.controller.left_hand_speed_array),
                 "right_speed": _read_shared(self.controller.right_hand_speed_array),
+                "tactile": (
+                    tactile_snapshot()
+                    if tactile_snapshot is not None
+                    else {
+                        "sample_hz": 0.0,
+                        "target_hz": 0.0,
+                        "selection": [],
+                        "hands": {},
+                    }
+                ),
             },
         )
 

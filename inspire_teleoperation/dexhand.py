@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from ipaddress import AddressValueError, IPv4Address
 import sys
 from threading import RLock
 import time
@@ -27,6 +28,8 @@ MAX_MODBUS_READ_REGISTERS = 125
 MAX_MODBUS_WRITE_REGISTERS = 123
 TACTILE_START_ADDRESS = 3000
 TACTILE_END_ADDRESS = 5124
+IP_ADDRESS_START_ADDRESS = 1700
+IP_ADDRESS_BYTE_COUNT = 4
 
 DOF_NAMES = (
     "finger4",
@@ -153,6 +156,8 @@ class Dexhand:
     地址选择、范围校验与 16 位有符号值/``-1`` 保持不动标记的协议转换；触觉
     方法负责分批读取和二维空间布局转换。
     """
+
+    tactile_batch_count = len(TACTILE_READ_BATCHES)
 
     def __init__(
         self,
@@ -393,6 +398,37 @@ class Dexhand:
 
         return self._read_byte_block(1618, DOF_COUNT)
 
+    def read_ip_address(self) -> str:
+        """读取设备配置的 IPv4 地址。"""
+
+        parts = self._read_byte_block(IP_ADDRESS_START_ADDRESS, IP_ADDRESS_BYTE_COUNT)
+        return str(IPv4Address(bytes(parts)))
+
+    def write_ip_address(self, address: str, *, save: bool = True) -> None:
+        """写入设备 IPv4 地址；保存后仍需重新上电才会生效。
+
+        ``save=True`` 会在写入地址后调用 :meth:`save_parameters` 将参数保存到
+        Flash。修改不会重建当前客户端连接，也不会改变 :attr:`host`；设备重新
+        上电后，应使用新地址创建新的 :class:`Dexhand` 实例。
+        """
+
+        if not isinstance(address, str):
+            raise TypeError("address 必须是 IPv4 地址字符串")
+        try:
+            packed = IPv4Address(address).packed
+        except AddressValueError as error:
+            raise ValueError(f"无效的 IPv4 地址：{address!r}") from error
+
+        # 设备文档使用连续字节地址；PyModbus word 按设备约定以低位字节在前打包。
+        words = [
+            packed[0] | (packed[1] << 8),
+            packed[2] | (packed[3] << 8),
+        ]
+        with self._lock:
+            self.write_registers(IP_ADDRESS_START_ADDRESS, words)
+            if save:
+                self.save_parameters()
+
     def read_tactile_region(self, name: str) -> TactileArray:
         """读取一个具名触觉区域，返回按实际行列排列的二维 ``uint16`` 数组。
 
@@ -417,25 +453,26 @@ class Dexhand:
         """读取完整压阻式触觉帧，返回 17 个具名二维区域。
 
         设备的触觉区是 3000～5123 的连续字节地址，共 1062 个 16 位触点。一次
-        Modbus 读取不能覆盖完整数据，因此内部会合并相邻区域分批读取，并在同一
-        客户端锁内完成整帧。
+        Modbus 读取不能覆盖完整数据，因此内部会合并相邻区域分批读取。每个批次
+        单独持有客户端锁，使控制线程可以在批次之间及时下发指令。
         """
 
         regions: dict[str, TactileArray] = {}
-        with self._lock:
-            for address, names in TACTILE_READ_BATCHES:
-                count = sum(
-                    TACTILE_REGION_SPECS[name].register_count for name in names
+        for batch_index, (address, names) in enumerate(TACTILE_READ_BATCHES):
+            count = sum(
+                TACTILE_REGION_SPECS[name].register_count for name in names
+            )
+            values = self.read_registers(address, count)
+            offset = 0
+            for name in names:
+                spec = TACTILE_REGION_SPECS[name]
+                end = offset + spec.register_count
+                regions[name] = self._reshape_tactile_region(
+                    values[offset:end], spec
                 )
-                values = self.read_registers(address, count)
-                offset = 0
-                for name in names:
-                    spec = TACTILE_REGION_SPECS[name]
-                    end = offset + spec.register_count
-                    regions[name] = self._reshape_tactile_region(
-                        values[offset:end], spec
-                    )
-                    offset = end
+                offset = end
+            if batch_index + 1 < len(TACTILE_READ_BATCHES):
+                time.sleep(0)
         return regions
 
     def clear_errors(self) -> None:
@@ -545,6 +582,8 @@ __all__ = [
     "DEFAULT_TIMEOUT_SECONDS",
     "DOF_NAMES",
     "Dexhand",
+    "IP_ADDRESS_BYTE_COUNT",
+    "IP_ADDRESS_START_ADDRESS",
     "MAX_MODBUS_READ_REGISTERS",
     "MAX_MODBUS_WRITE_REGISTERS",
     "REGISTER_SPECS",
