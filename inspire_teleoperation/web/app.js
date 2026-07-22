@@ -9,8 +9,9 @@ const copy = {
     controlParams: "控制策略", controlHelp: "设置通信频率与关节运动速度", port: "Modbus 端口", timeout: "请求超时", speedMode: "速度模式", adaptive: "自适应 2.0", adaptive_v2: "自适应 2.0", adaptive_v1: "自适应 1.0", fixed: "固定速度", fixedSpeed: "固定速度", fixedSpeedHint: "仅固定模式生效", questRate: "Quest 采样率", handRate: "手部指令率", tactileRateSetting: "触觉轮询率", tactileRateHint: "范围 1–60 Hz，仅在触觉页采集",
     advancedOptions: "会话选项", advancedHint: "跟踪启动、标记显示与断开行为", startNow: "连接后立即跟踪", startNowHelp: "工作区清空时使用", hideMarkers: "隐藏 Quest 标记", hideMarkersHelp: "不影响数据采集", openExit: "断开设备时张手", openExitHelp: "安装工具时保持关闭",
     safetyCheck: "连接前检查", safetyIntro: "设备可能在连接后立即运动", checkWorkspace: "设备固定与线缆状态已检查", checkNetwork: "设备地址与网络已确认", checkSpeed: "已选择合适的速度策略", safetyConfirm: "我确认工作区内没有人员、工具或易损物体", safetyDetail: "此确认是建立设备连接的必要条件。", connect: "连接设备", localOnly: "仅在本机建立连接",
-    liveEyebrow: "实时遥操作", dashboardTitle: "运行控制台", dashboardLead: "监控连接、数据链路与关节状态。", session: "会话", teleopStatus: "遥操作状态", questData: "Quest 数据", loopRate: "主循环频率", safetyTitle: "进入工作区前", safetyPause: "请先停止跟踪", run: "开始跟踪", stopTracking: "停止跟踪", switchSpeed: "切换速度", calibrateForce: "力传感器校准", disconnect: "断开设备",
-    tactileEyebrow: "触觉反馈", tactileTitle: "触觉热力图", tactileLead: "查看每个触觉区域的压力分布，悬停方格可读取精确数值。", bothHands: "双手", tactileStatus: "数据状态", sampleRate: "采样频率", waitingTactile: "等待首帧", tactileReady: "数据已更新", tactileNoData: "正在读取触觉数据…", tactileError: "读取失败", row: "行", column: "列", sensorValue: "数值",
+    liveEyebrow: "实时遥操作", dashboardTitle: "运行控制台", dashboardLead: "监控连接、数据链路与关节状态。", session: "会话", teleopStatus: "遥操作状态", questData: "Quest 数据", loopRate: "主循环频率", safetyTitle: "进入工作区前", safetyPause: "请先停止跟踪", run: "开始跟踪", stopTracking: "停止跟踪", switchSpeed: "切换速度", motionFilterOff: "微滤波：关", motionFilterOn: "微滤波：开", calibrateForce: "力传感器校准", disconnect: "断开设备",
+    tactileEyebrow: "触觉反馈", tactileTitle: "触觉热力图", tactileLead: "查看每个触觉区域的压力分布，悬停方格可读取精确数值。", bothHands: "双手", tactileStatus: "数据状态", sampleRate: "采样频率", waitingTactile: "等待首帧", tactileReady: "数据已更新", tactileNoData: "正在读取触觉数据…", tactileError: "读取失败", row: "行", column: "列", sensorValue: "数值", rawValue: "原始值", processedValue: "净化值",
+    filterTitle: "噪声处理", filterLead: "在基础逐点滤波与力辅助增强方案之间按场景切换", filterUncalibrated: "待零点学习", filterCalibrating: "正在学习", filterCalibrated: "已启用", filterIncomplete: "部分手部待学习", filterFailed: "学习失败", filterStepPrepare: "保持灵巧手悬空、静止", filterStepLearn: "学习 3 秒静态零点", filterStepUse: "查看净化后的触觉", filterDisplay: "热力图数据", filterProcessed: "净化后", filterRaw: "原始值", filterAlgorithm: "处理方案", filterBasic: "基础滤波", filterEnhanced: "力辅助增强", filterSensitivity: "灵敏度", filterSensitive: "灵敏", filterBalanced: "均衡（推荐）", filterStable: "稳定", filterBasicDrift: "缓慢漂移补偿", filterBasicDriftHelp: "仅在未检测到接触时微调逐点零点", filterDrift: "力辅助基线恢复", filterDriftHelp: "无接触时慢跟踪；确认卸载后恢复压后偏移", filterCalibrate: "学习静态零点", filterRecalibrate: "重新学习零点", filterCancel: "取消学习", filterReadyHint: "预热并保持无接触后开始；每次重连或底层力校准后请重新学习", filterKeepStill: "请勿触碰 · 正在学习触觉与六路力零点", filterComplete: "静态零点学习完成，两套处理方案均可使用", filterCompleteNoForce: "触觉零点学习完成；基础滤波可用，增强方案采用保守恢复模式", filterNotEnoughSamples: "有效样本不足，请确认触觉数据正常后重试", filterSelectHand: "请先选择并等待手部触觉数据", filterBaselinePoints: "已学习触点", filterActivePoints: "当前接触", filterSuppressedPoints: "本帧抑制", filterModuleStates: "模块状态", filterNoContactShort: "空闲", filterContactShort: "接触", filterRecoveryShort: "恢复", filterRawCaptureNote: "处理只影响热力图；下方采集文件保存原始触觉及同步六路力数据，便于复查和离线标定。", filterResetAfterForce: "底层力校准已完成，请重新学习触觉与六路力静态零点。",
     captureTitle: "触觉信息采集", captureLead: "按指定频率将当前所选手部的触觉帧流式写入文件", captureFrequency: "采集频率", captureFrequencyHint: "不得高于当前触觉数据率", captureDuration: "采集时间", captureDurationHint: "最长 24 小时", captureOutput: "输出路径", captureOutputHint: "可填写目录或以 .jsonl 结尾的文件路径", captureFormat: "输出格式", captureFormatHint: "每行一帧，支持流式读取", captureStart: "开始采集", captureStop: "停止采集", captureIdle: "未开始", captureRecording: "采集中", captureStopping: "正在停止", captureCompleted: "采集完成", captureStopped: "已停止", captureFailed: "采集失败", captureWaiting: "等待开始采集", captureSamples: "帧", captureSavedTo: "输出文件", captureSelectHand: "请先选择要采集的手部。", captureProgress: "采集进度", captureDropped: "丢弃帧",
     joint: "关节", position: "实际 / 目标", speed: "速度", sixJoints: "6 个关节", latestEvents: "最近 4 条运行事件", viewAllLogs: "查看全部", logsEyebrow: "运行记录", logsLead: "查看当前控制会话的完整运行事件。", logEntries: "条记录", clearLogs: "清空日志", currentSession: "当前会话", realtimeUpdates: "日志实时更新", liveUpdate: "实时", time: "时间", clear: "清空", level: "级别", event: "事件", noEvents: "暂无运行日志",
     cancel: "取消", confirm: "确认", waitingSetup: "等待配置", connecting: "正在连接", disconnecting: "正在断开", live: "已连接", stopping: "正在停止", stopped: "已停止", error: "连接错误", paused: "跟踪已停止", running: "正在跟踪", waitingData: "等待手部数据", ready: "数据就绪", unavailable: "无数据", connected: "已连接", enabled: "已启用", disabled: "未启用",
@@ -24,8 +25,9 @@ const copy = {
     controlParams: "Control strategy", controlHelp: "Set communication rates and joint motion speed", port: "Modbus port", timeout: "Request timeout", speedMode: "Speed mode", adaptive: "Adaptive 2.0", adaptive_v2: "Adaptive 2.0", adaptive_v1: "Adaptive 1.0", fixed: "Fixed speed", fixedSpeed: "Fixed speed", fixedSpeedHint: "Used in fixed mode only", questRate: "Quest polling", handRate: "Hand command rate", tactileRateSetting: "Tactile polling", tactileRateHint: "1–60 Hz; sampled only on the tactile page",
     advancedOptions: "Session options", advancedHint: "Tracking start, marker display, and disconnect behavior", startNow: "Track immediately", startNowHelp: "Use only in a clear workspace", hideMarkers: "Hide Quest markers", hideMarkersHelp: "Capture is unaffected", openExit: "Open hands on disconnect", openExitHelp: "Keep off when tools are attached",
     safetyCheck: "Preflight check", safetyIntro: "Devices may move immediately after connection", checkWorkspace: "Device mounting and cables checked", checkNetwork: "Device addresses and network verified", checkSpeed: "Appropriate speed strategy selected", safetyConfirm: "I confirm the workspaces are clear of people, tools, and fragile objects", safetyDetail: "This confirmation is required to establish a connection.", connect: "Connect devices", localOnly: "Connection stays on this machine",
-    liveEyebrow: "Live teleoperation", dashboardTitle: "Operations console", dashboardLead: "Monitor connections, data flow, and joint state.", session: "Session", teleopStatus: "Teleop status", questData: "Quest data", loopRate: "Main loop rate", safetyTitle: "Before entering workspace", safetyPause: "Stop tracking first", run: "Start tracking", stopTracking: "Stop tracking", switchSpeed: "Switch speed", calibrateForce: "Calibrate force sensors", disconnect: "Disconnect devices",
-    tactileEyebrow: "Tactile feedback", tactileTitle: "Tactile heatmap", tactileLead: "Inspect pressure across every tactile region; hover a cell for its exact value.", bothHands: "Both hands", tactileStatus: "Live data", sampleRate: "Sample rate", waitingTactile: "Waiting for first frame", tactileReady: "Data updated", tactileNoData: "Reading tactile data…", tactileError: "Read failed", row: "Row", column: "Column", sensorValue: "Value",
+    liveEyebrow: "Live teleoperation", dashboardTitle: "Operations console", dashboardLead: "Monitor connections, data flow, and joint state.", session: "Session", teleopStatus: "Teleop status", questData: "Quest data", loopRate: "Main loop rate", safetyTitle: "Before entering workspace", safetyPause: "Stop tracking first", run: "Start tracking", stopTracking: "Stop tracking", switchSpeed: "Switch speed", motionFilterOff: "Micro-filter: Off", motionFilterOn: "Micro-filter: On", calibrateForce: "Calibrate force sensors", disconnect: "Disconnect devices",
+    tactileEyebrow: "Tactile feedback", tactileTitle: "Tactile heatmap", tactileLead: "Inspect pressure across every tactile region; hover a cell for its exact value.", bothHands: "Both hands", tactileStatus: "Live data", sampleRate: "Sample rate", waitingTactile: "Waiting for first frame", tactileReady: "Data updated", tactileNoData: "Reading tactile data…", tactileError: "Read failed", row: "Row", column: "Column", sensorValue: "Value", rawValue: "Raw", processedValue: "Filtered",
+    filterTitle: "Noise processing", filterLead: "Switch between basic per-cell filtering and force-assisted processing for each scenario", filterUncalibrated: "Baseline required", filterCalibrating: "Learning", filterCalibrated: "Enabled", filterIncomplete: "Some hands need learning", filterFailed: "Learning failed", filterStepPrepare: "Keep the hands free and still", filterStepLearn: "Learn a 3-second baseline", filterStepUse: "View filtered tactile data", filterDisplay: "Heatmap data", filterProcessed: "Filtered", filterRaw: "Raw", filterAlgorithm: "Processing mode", filterBasic: "Basic filter", filterEnhanced: "Force-assisted", filterSensitivity: "Sensitivity", filterSensitive: "Sensitive", filterBalanced: "Balanced (recommended)", filterStable: "Stable", filterBasicDrift: "Slow drift compensation", filterBasicDriftHelp: "Adjust each baseline only while no contact is detected", filterDrift: "Force-assisted recovery", filterDriftHelp: "Track slowly when idle; recover post-load offset after confirmed unloading", filterCalibrate: "Learn idle baseline", filterRecalibrate: "Relearn baseline", filterCancel: "Cancel learning", filterReadyHint: "Warm up and remove all contact first; relearn after each reconnect or low-level force calibration", filterKeepStill: "Do not touch · learning tactile and six-force baselines", filterComplete: "Idle baselines learned; both processing modes are available", filterCompleteNoForce: "Tactile baselines learned; basic filtering is available and force-assisted mode uses conservative recovery", filterNotEnoughSamples: "Not enough valid samples. Check tactile data and try again", filterSelectHand: "Select a hand and wait for tactile data first", filterBaselinePoints: "Learned cells", filterActivePoints: "Active contact", filterSuppressedPoints: "Suppressed now", filterModuleStates: "Module states", filterNoContactShort: "Idle", filterContactShort: "Contact", filterRecoveryShort: "Recovery", filterRawCaptureNote: "Processing affects only the heatmap. Captures keep raw tactile values and synchronized six-force data for review and offline calibration.", filterResetAfterForce: "Low-level force calibration completed. Relearn tactile and six-force idle baselines.",
     captureTitle: "Tactile data capture", captureLead: "Stream tactile frames from the selected hands to a file at a defined rate", captureFrequency: "Capture rate", captureFrequencyHint: "Cannot exceed the available tactile data rate", captureDuration: "Duration", captureDurationHint: "Up to 24 hours", captureOutput: "Output path", captureOutputHint: "Enter a directory or a file ending in .jsonl", captureFormat: "Output format", captureFormatHint: "One frame per line for streaming reads", captureStart: "Start capture", captureStop: "Stop capture", captureIdle: "Not started", captureRecording: "Recording", captureStopping: "Stopping", captureCompleted: "Complete", captureStopped: "Stopped", captureFailed: "Capture failed", captureWaiting: "Waiting to start", captureSamples: "frames", captureSavedTo: "Output file", captureSelectHand: "Select at least one hand to capture.", captureProgress: "Capture progress", captureDropped: "Dropped frames",
     joint: "Joint", position: "Actual / target", speed: "Speed", sixJoints: "6 joints", latestEvents: "Latest 4 runtime events", viewAllLogs: "View all", logsEyebrow: "Runtime records", logsLead: "Review the complete event history for the current control session.", logEntries: "entries", clearLogs: "Clear logs", currentSession: "Current session", realtimeUpdates: "Logs update in real time", liveUpdate: "Live", time: "Time", clear: "Clear", level: "Level", event: "Event", noEvents: "No runtime events",
     cancel: "Cancel", confirm: "Confirm", waitingSetup: "Awaiting setup", connecting: "Connecting", disconnecting: "Disconnecting", live: "Connected", stopping: "Stopping", stopped: "Stopped", error: "Connection error", paused: "Tracking stopped", running: "Tracking", waitingData: "Waiting for hand data", ready: "Data ready", unavailable: "Unavailable", connected: "Connected", enabled: "Enabled", disabled: "Disabled",
@@ -49,6 +51,9 @@ let setupErrors = [];
 let tactileSelection = [];
 let tactileFingerprint = "";
 let activeTactileCell = null;
+let tactileDisplayMode = "filtered";
+let tactileProcessingMode = "enhanced";
+let lastForceCalibrationState = "idle";
 let latestCapture = { state: "idle" };
 let captureRequestError = "";
 let calibrationDialogStage = "idle";
@@ -66,6 +71,18 @@ const setupPreferenceFields = [
 ];
 const defaultPreferences = { fontSize: 12, accent: "#a7f432" };
 const defaultCapturePreferences = { frequency: 10, duration: 10, output: "tactile_captures" };
+const tactileCalibrationDurationMs = 3000;
+const tactileCalibrationMinimumSamples = 15;
+const tactileSensitivityProfiles = {
+  sensitive: { thresholdScale: 0.75, smoothing: 0.65 },
+  balanced: { thresholdScale: 1, smoothing: 0.45 },
+  stable: { thresholdScale: 1.5, smoothing: 0.3 }
+};
+const tactileForceIndex = { little: 0, ring: 1, middle: 2, index: 3, thumb: 4 };
+const tactileBaselineTauSeconds = 30;
+const tactileRecoveryTauSeconds = 4;
+const tactileRecoveryConfirmSeconds = 0.5;
+let tactileFilter = createTactileFilterState();
 let preferences = { ...defaultPreferences };
 
 const tactileGroupSpecs = [
@@ -78,6 +95,32 @@ const tactileGroupSpecs = [
 ];
 
 function t(key) { return copy[language][key] ?? key; }
+
+function createTactileFilterState() {
+  return {
+    status: "idle",
+    sides: [],
+    startedAt: 0,
+    timer: null,
+    samples: {},
+    sampleRevisions: {},
+    baselines: {},
+    modeBaselines: { basic: {}, enhanced: {} },
+    deadbands: {},
+    forceBaselines: {},
+    forceDeadbands: {},
+    calibratedSides: new Set(),
+    temporal: {},
+    moduleStates: {},
+    displayCache: {},
+    displayRevisions: {},
+    pointCount: 0,
+    activeCount: null,
+    suppressedCount: null,
+    moduleStateCounts: null,
+    messageKey: "filterReadyHint"
+  };
+}
 
 function updateShutdownAvailability(hasSession = lastPhase !== "setup") {
   const button = $('#shutdown-button');
@@ -192,6 +235,7 @@ function applyLanguage() {
     $('#tactile-hands').innerHTML = "";
     renderTactile(latestSnapshot.tactile || {});
   }
+  renderTactileFilterPanel();
   if (setupErrors.length) renderSetupErrors(setupErrors);
   renderTactileCapture(latestCapture);
   logFingerprint = "";
@@ -309,6 +353,7 @@ function phaseLabel(phase) {
 
 function renderPhase(state) {
   const phaseChanged = lastPhase !== state.phase;
+  if (phaseChanged && (state.phase === "live" || state.phase === "setup")) resetTactileFilter();
   lastPhase = state.phase;
   $('#connection-label').textContent = phaseLabel(state.phase);
   $('#connection-dot').className = `status-dot ${state.phase === "live" ? "live" : state.phase === "error" ? "error" : ""}`;
@@ -374,6 +419,13 @@ function renderSnapshot(snapshot) {
   $('#session-time').textContent = formatDuration(snapshot.elapsed_seconds);
   $('#loop-rate').textContent = Number(snapshot.loop_hz || 0).toFixed(1);
   $('#speed-mode-label').textContent = t(snapshot.speed_mode);
+  const motionFilterEnabled = Boolean(snapshot.motion_filter_enabled);
+  const motionFilterButton = $('#motion-filter-button');
+  motionFilterButton.classList.toggle("toggle-active", motionFilterEnabled);
+  motionFilterButton.setAttribute("aria-pressed", String(motionFilterEnabled));
+  $('span', motionFilterButton).textContent = t(
+    motionFilterEnabled ? "motionFilterOn" : "motionFilterOff"
+  );
   const running = snapshot.tracking_enabled && snapshot.motion_data_ready;
   const trackingEnabled = Boolean(snapshot.tracking_enabled);
   $('#tracking-indicator').classList.toggle("running", running);
@@ -387,6 +439,478 @@ function renderSnapshot(snapshot) {
   $('span:first-child', trackingButton).className = trackingEnabled ? "stop-icon" : "play-icon";
   renderHand("left", snapshot.left_enabled, snapshot.left_state, snapshot.left_target, snapshot.left_speed);
   renderHand("right", snapshot.right_enabled, snapshot.right_state, snapshot.right_target, snapshot.right_speed);
+}
+
+function tactileFrameCopy(regions = {}) {
+  return Object.fromEntries(Object.entries(regions).map(([name, rows]) => [
+    name,
+    Array.isArray(rows) ? rows.map(row => Array.isArray(row) ? row.map(value => Number(value) || 0) : []) : []
+  ]));
+}
+
+function tactileQuantile(values, probability) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const position = Math.max(0, Math.min(sorted.length - 1, probability * (sorted.length - 1)));
+  const lowerIndex = Math.floor(position);
+  const upperIndex = Math.ceil(position);
+  const fraction = position - lowerIndex;
+  return sorted[lowerIndex] + (sorted[upperIndex] - sorted[lowerIndex]) * fraction;
+}
+
+function clearTactileTemporalState() {
+  tactileFilter.temporal = {};
+  tactileFilter.moduleStates = {};
+  tactileFilter.displayCache = {};
+  tactileFilter.displayRevisions = {};
+  tactileFingerprint = "";
+}
+
+function resetTactileFilter(messageKey = "filterReadyHint") {
+  if (tactileFilter.timer) window.clearTimeout(tactileFilter.timer);
+  tactileFilter = createTactileFilterState();
+  tactileFilter.messageKey = messageKey;
+  tactileFingerprint = "";
+  renderTactileFilterPanel();
+}
+
+function selectedTactileHandsReady() {
+  const hands = latestSnapshot?.tactile?.hands || {};
+  return tactileSelection.length > 0 && tactileSelection.every(side => Object.keys(hands[side]?.regions || {}).length > 0);
+}
+
+function beginTactileBaselineLearning() {
+  if (tactileFilter.status === "calibrating") {
+    if (tactileFilter.timer) window.clearTimeout(tactileFilter.timer);
+    tactileFilter.status = "idle";
+    tactileFilter.samples = {};
+    tactileFilter.sampleRevisions = {};
+    tactileFilter.messageKey = "filterReadyHint";
+    renderTactileFilterPanel();
+    return;
+  }
+  if (!selectedTactileHandsReady()) {
+    tactileFilter.status = "error";
+    tactileFilter.messageKey = "filterSelectHand";
+    renderTactileFilterPanel();
+    return;
+  }
+  tactileFilter.status = "calibrating";
+  tactileFilter.sides = [...tactileSelection];
+  tactileFilter.startedAt = performance.now();
+  tactileFilter.samples = Object.fromEntries(tactileFilter.sides.map(side => [side, []]));
+  tactileFilter.sampleRevisions = {};
+  tactileFilter.messageKey = "filterKeepStill";
+  clearTactileTemporalState();
+  renderTactileFilterPanel();
+  tactileFilter.timer = window.setTimeout(finishTactileBaselineLearning, tactileCalibrationDurationMs + 80);
+}
+
+function collectTactileBaselineSamples(hands = {}) {
+  if (tactileFilter.status !== "calibrating") return;
+  tactileFilter.sides.forEach(side => {
+    const hand = hands[side];
+    const revision = Number(hand?.revision || 0);
+    if (!revision || revision === tactileFilter.sampleRevisions[side]) return;
+    const regions = hand?.regions || {};
+    if (!Object.keys(regions).length) return;
+    tactileFilter.sampleRevisions[side] = revision;
+    tactileFilter.samples[side].push({
+      regions: tactileFrameCopy(regions),
+      forces: Array.isArray(hand.forces) ? hand.forces.map(value => Number(value) || 0) : []
+    });
+  });
+  renderTactileFilterPanel();
+}
+
+function finishTactileBaselineLearning() {
+  if (tactileFilter.status !== "calibrating") return;
+  tactileFilter.timer = null;
+  const complete = tactileFilter.sides.every(side => (tactileFilter.samples[side] || []).length >= tactileCalibrationMinimumSamples);
+  if (!complete) {
+    tactileFilter.status = "error";
+    tactileFilter.messageKey = "filterNotEnoughSamples";
+    renderTactileFilterPanel();
+    return;
+  }
+
+  tactileFilter.sides.forEach(side => {
+    const frames = tactileFilter.samples[side];
+    const reference = frames[0].regions;
+    const baselines = {};
+    const deadbands = {};
+    Object.entries(reference).forEach(([name, rows]) => {
+      baselines[name] = rows.map((row, rowIndex) => row.map((_value, columnIndex) => {
+        const values = frames.map(frame => Number(frame.regions[name]?.[rowIndex]?.[columnIndex]) || 0);
+        return tactileQuantile(values, 0.5);
+      }));
+      deadbands[name] = rows.map((row, rowIndex) => row.map((_value, columnIndex) => {
+        const values = frames.map(frame => Number(frame.regions[name]?.[rowIndex]?.[columnIndex]) || 0);
+        const baseline = baselines[name][rowIndex][columnIndex];
+        const deviations = values.map(value => Math.abs(value - baseline));
+        return Math.max(3, tactileQuantile(deviations, 0.99) + 2);
+      }));
+    });
+    tactileFilter.baselines[side] = baselines;
+    tactileFilter.modeBaselines.basic[side] = tactileFrameCopy(baselines);
+    tactileFilter.modeBaselines.enhanced[side] = tactileFrameCopy(baselines);
+    tactileFilter.deadbands[side] = deadbands;
+    const forceFrames = frames.map(frame => frame.forces).filter(values => values.length === 6);
+    if (forceFrames.length >= tactileCalibrationMinimumSamples) {
+      tactileFilter.forceBaselines[side] = Array.from({ length: 6 }, (_unused, index) => {
+        return tactileQuantile(forceFrames.map(values => values[index]), 0.5);
+      });
+      tactileFilter.forceDeadbands[side] = Array.from({ length: 6 }, (_unused, index) => {
+        const baseline = tactileFilter.forceBaselines[side][index];
+        const deviations = forceFrames.map(values => Math.abs(values[index] - baseline));
+        return Math.max(5, tactileQuantile(deviations, 0.99) + 3);
+      });
+    } else {
+      delete tactileFilter.forceBaselines[side];
+      delete tactileFilter.forceDeadbands[side];
+    }
+    tactileFilter.calibratedSides.add(side);
+  });
+  tactileFilter.status = "ready";
+  tactileFilter.samples = {};
+  tactileFilter.sampleRevisions = {};
+  tactileFilter.messageKey = tactileFilter.sides.every(side => tactileFilter.forceBaselines[side]?.length === 6)
+    ? "filterComplete"
+    : "filterCompleteNoForce";
+  tactileDisplayMode = "filtered";
+  clearTactileTemporalState();
+  renderTactileFilterPanel();
+}
+
+function tactileFilterStatus() {
+  if (tactileFilter.status === "calibrating" || tactileFilter.status === "error") return tactileFilter.status;
+  if (!tactileFilter.calibratedSides.size) return "idle";
+  if (tactileSelection.length && tactileSelection.every(side => tactileFilter.calibratedSides.has(side))) return "ready";
+  return "partial";
+}
+
+function renderTactileFilterPanel() {
+  const panel = $('#filter-state');
+  if (!panel) return;
+  const status = tactileFilterStatus();
+  panel.dataset.state = status;
+  $('span:last-child', panel).textContent = t({
+    idle: "filterUncalibrated",
+    calibrating: "filterCalibrating",
+    ready: "filterCalibrated",
+    partial: "filterIncomplete",
+    error: "filterFailed"
+  }[status]);
+
+  const elapsed = tactileFilter.status === "calibrating" ? performance.now() - tactileFilter.startedAt : 0;
+  const progress = tactileFilter.status === "calibrating" ? Math.min(100, elapsed / tactileCalibrationDurationMs * 100) : status === "ready" ? 100 : 0;
+  $('#filter-progress-bar').style.width = `${progress}%`;
+  $('#filter-progress-label').textContent = t(tactileFilter.messageKey);
+  $('#filter-point-count').textContent = tactileFilter.pointCount.toLocaleString(language === "zh" ? "zh-CN" : "en-US");
+  $('#filter-active-count').textContent = tactileFilter.activeCount === null ? "--" : tactileFilter.activeCount;
+  $('#filter-suppressed-count').textContent = tactileFilter.suppressedCount === null ? "--" : tactileFilter.suppressedCount;
+  const moduleCounts = tactileFilter.moduleStateCounts;
+  $('#filter-module-state').textContent = moduleCounts === null
+    ? "--"
+    : `${t("filterNoContactShort")} ${moduleCounts.no_contact} · ${t("filterContactShort")} ${moduleCounts.contact} · ${t("filterRecoveryShort")} ${moduleCounts.recovery}`;
+  $('.filter-module-metric')?.classList.toggle("inactive", tactileProcessingMode !== "enhanced");
+
+  const driftLabelKey = tactileProcessingMode === "enhanced" ? "filterDrift" : "filterBasicDrift";
+  const driftHelpKey = tactileProcessingMode === "enhanced" ? "filterDriftHelp" : "filterBasicDriftHelp";
+  const driftLabel = $('#filter-drift-label');
+  const driftHelp = $('#filter-drift-help');
+  driftLabel.dataset.i18n = driftLabelKey;
+  driftHelp.dataset.i18n = driftHelpKey;
+  driftLabel.textContent = t(driftLabelKey);
+  driftHelp.textContent = t(driftHelpKey);
+
+  const button = $('#tactile-zero-button');
+  button.disabled = tactileFilter.status !== "calibrating" && !selectedTactileHandsReady();
+  $('span:last-child', button).textContent = t(tactileFilter.status === "calibrating" ? "filterCancel" : tactileFilter.calibratedSides.size ? "filterRecalibrate" : "filterCalibrate");
+  button.classList.toggle("calibrating", tactileFilter.status === "calibrating");
+  $$('#tactile-display-selector button').forEach(option => {
+    const active = option.dataset.tactileDisplay === tactileDisplayMode;
+    option.classList.toggle("active", active);
+    option.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  $$('#tactile-processing-selector button').forEach(option => {
+    const active = option.dataset.tactileProcessing === tactileProcessingMode;
+    option.classList.toggle("active", active);
+    option.setAttribute("aria-pressed", active ? "true" : "false");
+    option.disabled = tactileFilter.status === "calibrating";
+  });
+}
+
+function tactileTemporalRegion(side, name, rows) {
+  tactileFilter.temporal[side] ||= {};
+  const existing = tactileFilter.temporal[side][name];
+  if (existing && existing.history.length === rows.length && existing.history.every((row, index) => row.length === rows[index].length)) return existing;
+  const region = {
+    history: rows.map(row => row.map(() => [0, 0])),
+    smoothed: rows.map(row => row.map(() => 0)),
+    active: rows.map(row => row.map(() => false))
+  };
+  tactileFilter.temporal[side][name] = region;
+  return region;
+}
+
+function tactileModuleState(side, name) {
+  tactileFilter.moduleStates[side] ||= {};
+  tactileFilter.moduleStates[side][name] ||= {
+    state: "no_contact",
+    peakResponse: 0,
+    lastResponse: 0,
+    quietSince: null,
+    lastAt: performance.now()
+  };
+  return tactileFilter.moduleStates[side][name];
+}
+
+function tactileRegionForceChannel(name) {
+  const finger = String(name).split("_", 1)[0];
+  return Object.prototype.hasOwnProperty.call(tactileForceIndex, finger) ? tactileForceIndex[finger] : null;
+}
+
+function tactileLargestComponent(mask) {
+  const visited = mask.map(row => row.map(() => false));
+  let largest = 0;
+  mask.forEach((row, rowIndex) => row.forEach((active, columnIndex) => {
+    if (!active || visited[rowIndex][columnIndex]) return;
+    let size = 0;
+    const pending = [[rowIndex, columnIndex]];
+    visited[rowIndex][columnIndex] = true;
+    while (pending.length) {
+      const [currentRow, currentColumn] = pending.pop();
+      size += 1;
+      [[currentRow - 1, currentColumn], [currentRow + 1, currentColumn], [currentRow, currentColumn - 1], [currentRow, currentColumn + 1]].forEach(([nextRow, nextColumn]) => {
+        if (nextRow < 0 || nextColumn < 0 || nextRow >= mask.length || nextColumn >= mask[nextRow].length) return;
+        if (!mask[nextRow][nextColumn] || visited[nextRow][nextColumn]) return;
+        visited[nextRow][nextColumn] = true;
+        pending.push([nextRow, nextColumn]);
+      });
+    }
+    largest = Math.max(largest, size);
+  }));
+  return largest;
+}
+
+function processBasicTactileHand(side, hand) {
+  const revision = Number(hand?.revision || 0);
+  if (revision && tactileFilter.displayRevisions[side] === revision && tactileFilter.displayCache[side]) return tactileFilter.displayCache[side];
+  if (!tactileFilter.calibratedSides.has(side) || !Object.keys(hand?.regions || {}).length) return hand;
+
+  const sensitivity = $('#tactile-filter-sensitivity')?.value || "balanced";
+  const profile = tactileSensitivityProfiles[sensitivity] || tactileSensitivityProfiles.balanced;
+  const compensateDrift = Boolean($('#tactile-drift-compensation')?.checked);
+  let activeCount = 0;
+  let suppressedCount = 0;
+  const regions = Object.fromEntries(Object.entries(hand.regions).map(([name, rows]) => {
+    const baselineRows = tactileFilter.modeBaselines.basic[side]?.[name] || [];
+    const deadbandRows = tactileFilter.deadbands[side]?.[name] || [];
+    const temporal = tactileTemporalRegion(side, name, rows);
+    const output = rows.map((row, rowIndex) => row.map((rawValue, columnIndex) => {
+      const raw = Math.max(0, Math.min(4095, Number(rawValue) || 0));
+      const baseline = Number(baselineRows[rowIndex]?.[columnIndex] || 0);
+      const threshold = Math.max(3, Number(deadbandRows[rowIndex]?.[columnIndex] || 3) * profile.thresholdScale);
+      const residual = Math.max(0, raw - baseline);
+      const history = temporal.history[rowIndex][columnIndex];
+      history.push(residual);
+      if (history.length > 3) history.shift();
+      const medianResidual = history[0] + history[1] + history[2] - Math.min(...history) - Math.max(...history);
+      const wasActive = temporal.active[rowIndex][columnIndex];
+      const contact = medianResidual > threshold * (wasActive ? 0.6 : 1);
+      temporal.active[rowIndex][columnIndex] = contact;
+      const gated = contact ? medianResidual : 0;
+      const previous = temporal.smoothed[rowIndex][columnIndex];
+      let filtered = previous + profile.smoothing * (gated - previous);
+      if (gated === 0 && filtered < 1) filtered = 0;
+      filtered = Math.max(0, Math.min(4095, Math.round(filtered)));
+      temporal.smoothed[rowIndex][columnIndex] = filtered;
+      if (contact) activeCount += 1;
+      if (residual > 0 && !contact) suppressedCount += 1;
+      if (compensateDrift && raw - baseline <= threshold) {
+        baselineRows[rowIndex][columnIndex] = baseline + (raw - baseline) * 0.0015;
+      }
+      return filtered;
+    }));
+    return [name, output];
+  }));
+  const filteredHand = { ...hand, regions, raw_regions: hand.regions, filter_stats: { mode: "basic", activeCount, suppressedCount } };
+  tactileFilter.displayRevisions[side] = revision;
+  tactileFilter.displayCache[side] = filteredHand;
+  return filteredHand;
+}
+
+function processEnhancedTactileHand(side, hand) {
+  const revision = Number(hand?.revision || 0);
+  if (revision && tactileFilter.displayRevisions[side] === revision && tactileFilter.displayCache[side]) return tactileFilter.displayCache[side];
+  if (!tactileFilter.calibratedSides.has(side) || !Object.keys(hand?.regions || {}).length) return hand;
+
+  const sensitivity = $('#tactile-filter-sensitivity')?.value || "balanced";
+  const profile = tactileSensitivityProfiles[sensitivity] || tactileSensitivityProfiles.balanced;
+  const compensateDrift = Boolean($('#tactile-drift-compensation')?.checked);
+  const frameNow = performance.now();
+  const forceValues = Array.isArray(hand.forces) ? hand.forces.map(value => Number(value) || 0) : [];
+  const forceAge = Number(hand.force_age_seconds);
+  let activeCount = 0;
+  let suppressedCount = 0;
+  const moduleStates = { no_contact: 0, contact: 0, recovery: 0 };
+  const regions = Object.fromEntries(Object.entries(hand.regions).map(([name, rows]) => {
+    const baselineRows = tactileFilter.modeBaselines.enhanced[side]?.[name] || [];
+    const deadbandRows = tactileFilter.deadbands[side]?.[name] || [];
+    const temporal = tactileTemporalRegion(side, name, rows);
+    const rawRows = rows.map(row => row.map(rawValue => Math.max(0, Math.min(4095, Number(rawValue) || 0))));
+    const thresholdRows = rows.map((row, rowIndex) => row.map((_value, columnIndex) => {
+      return Math.max(3, Number(deadbandRows[rowIndex]?.[columnIndex] || 3) * profile.thresholdScale);
+    }));
+
+    const calculateModuleSignal = () => {
+      const deltas = rawRows.map((row, rowIndex) => row.map((raw, columnIndex) => {
+        return raw - Number(baselineRows[rowIndex]?.[columnIndex] || 0);
+      }));
+      const commonCandidates = [];
+      deltas.forEach((row, rowIndex) => row.forEach((delta, columnIndex) => {
+        if (Math.abs(delta) <= thresholdRows[rowIndex][columnIndex]) commonCandidates.push(delta);
+      }));
+      const common = commonCandidates.length ? tactileQuantile(commonCandidates, 0.5) : 0;
+      const residuals = deltas.map(row => row.map(delta => Math.max(0, delta - common)));
+      const activeMask = residuals.map((row, rowIndex) => row.map((residual, columnIndex) => {
+        return residual > thresholdRows[rowIndex][columnIndex];
+      }));
+      const flatResiduals = residuals.flat();
+      return {
+        common,
+        deltas,
+        residuals,
+        activeMask,
+        response: flatResiduals.reduce((total, value) => total + value, 0),
+        maximum: Math.max(0, ...flatResiduals),
+        largestComponent: tactileLargestComponent(activeMask)
+      };
+    };
+
+    let signal = calculateModuleSignal();
+    const forceChannel = tactileRegionForceChannel(name);
+    const forceBaseline = forceChannel === null ? null : tactileFilter.forceBaselines[side]?.[forceChannel];
+    const forceDeadband = forceChannel === null ? null : tactileFilter.forceDeadbands[side]?.[forceChannel];
+    const forceAvailable = forceChannel !== null && forceValues.length === 6 && forceBaseline !== undefined && forceDeadband !== undefined && Number.isFinite(forceAge) && forceAge <= 0.5;
+    const forceContact = forceAvailable && Math.abs(forceValues[forceChannel] - forceBaseline) > forceDeadband;
+    const strongSinglePoint = signal.maximum > Math.max(20, Math.max(...thresholdRows.flat()) * 4);
+    const tactileContact = signal.largestComponent >= 2 || strongSinglePoint;
+    const module = tactileModuleState(side, name);
+    const elapsedSeconds = Math.max(0.001, Math.min(0.5, (frameNow - module.lastAt) / 1000));
+    module.lastAt = frameNow;
+
+    if (module.state === "no_contact") {
+      if (forceContact || tactileContact) {
+        module.state = "contact";
+        module.peakResponse = signal.response;
+        module.quietSince = null;
+      }
+    } else if (module.state === "contact") {
+      module.peakResponse = Math.max(module.peakResponse, signal.response);
+      const unloadedAfterPeak = module.peakResponse > 80 && signal.response < Math.max(20, module.peakResponse * 0.3);
+      const unloadedWithoutTactile = module.peakResponse <= 80 && !tactileContact;
+      const forceConfirmedRecovery = compensateDrift && forceAvailable && !forceContact && unloadedAfterPeak;
+      const cleanRelease = (forceAvailable && !forceContact && unloadedWithoutTactile) || (!forceAvailable && !tactileContact);
+      if (forceConfirmedRecovery || cleanRelease) {
+        module.quietSince ??= frameNow;
+        if ((frameNow - module.quietSince) / 1000 >= tactileRecoveryConfirmSeconds) {
+          module.state = forceConfirmedRecovery ? "recovery" : "no_contact";
+          if (module.state === "no_contact") module.peakResponse = 0;
+          module.quietSince = null;
+        }
+      } else {
+        module.quietSince = null;
+      }
+    } else {
+      const risingAgain = tactileContact && signal.response > Math.max(80, module.lastResponse * 1.8);
+      if (forceContact || risingAgain) {
+        module.state = "contact";
+        module.peakResponse = signal.response;
+        module.quietSince = null;
+      }
+    }
+
+    if (compensateDrift && module.state !== "contact") {
+      const tauSeconds = module.state === "recovery" ? tactileRecoveryTauSeconds : tactileBaselineTauSeconds;
+      const baselineAlpha = 1 - Math.exp(-elapsedSeconds / tauSeconds);
+      rawRows.forEach((row, rowIndex) => row.forEach((raw, columnIndex) => {
+        const baseline = Number(baselineRows[rowIndex]?.[columnIndex] || 0);
+        const smallIdleChange = raw - baseline - signal.common <= thresholdRows[rowIndex][columnIndex];
+        if (module.state === "recovery" || smallIdleChange) {
+          baselineRows[rowIndex][columnIndex] = baseline + baselineAlpha * (raw - baseline);
+        }
+      }));
+      signal = calculateModuleSignal();
+      const recovered = signal.activeMask.every(row => row.every(active => !active));
+      if (module.state === "recovery" && recovered) {
+        module.state = "no_contact";
+        module.peakResponse = 0;
+      }
+    }
+    module.lastResponse = signal.response;
+    moduleStates[module.state] += 1;
+
+    const output = rows.map((row, rowIndex) => row.map((_rawValue, columnIndex) => {
+      const threshold = thresholdRows[rowIndex][columnIndex];
+      const residual = signal.residuals[rowIndex][columnIndex];
+      const history = temporal.history[rowIndex][columnIndex];
+      history.push(residual);
+      if (history.length > 3) history.shift();
+      const medianResidual = history[0] + history[1] + history[2] - Math.min(...history) - Math.max(...history);
+      const wasActive = temporal.active[rowIndex][columnIndex];
+      const contact = medianResidual > threshold * (wasActive ? 0.6 : 1);
+      temporal.active[rowIndex][columnIndex] = contact;
+      const gated = contact ? medianResidual : 0;
+      const previous = temporal.smoothed[rowIndex][columnIndex];
+      let filtered = previous + profile.smoothing * (gated - previous);
+      if (gated === 0 && filtered < 1) filtered = 0;
+      filtered = Math.max(0, Math.min(4095, Math.round(filtered)));
+      temporal.smoothed[rowIndex][columnIndex] = filtered;
+      if (contact) activeCount += 1;
+      if (residual > 0 && !contact) suppressedCount += 1;
+      return filtered;
+    }));
+    return [name, output];
+  }));
+  const filteredHand = { ...hand, regions, raw_regions: hand.regions, filter_stats: { mode: "enhanced", activeCount, suppressedCount, moduleStates } };
+  tactileFilter.displayRevisions[side] = revision;
+  tactileFilter.displayCache[side] = filteredHand;
+  return filteredHand;
+}
+
+function processTactileHand(side, hand) {
+  return tactileProcessingMode === "basic"
+    ? processBasicTactileHand(side, hand)
+    : processEnhancedTactileHand(side, hand);
+}
+
+function tactileDisplayHands(hands = {}) {
+  let activeCount = 0;
+  let suppressedCount = 0;
+  const moduleStateCounts = { no_contact: 0, contact: 0, recovery: 0 };
+  const processed = Object.fromEntries(Object.entries(hands).map(([side, hand]) => {
+    const filtered = processTactileHand(side, hand);
+    if (filtered !== hand) {
+      activeCount += Number(filtered.filter_stats?.activeCount || 0);
+      suppressedCount += Number(filtered.filter_stats?.suppressedCount || 0);
+      if (tactileProcessingMode === "enhanced") {
+        Object.keys(moduleStateCounts).forEach(state => {
+          moduleStateCounts[state] += Number(filtered.filter_stats?.moduleStates?.[state] || 0);
+        });
+      }
+    }
+    return [side, tactileDisplayMode === "filtered" ? filtered : hand];
+  }));
+  if (tactileFilter.calibratedSides.size) {
+    tactileFilter.pointCount = Object.values(tactileFilter.baselines).reduce((total, regions) => total + Object.values(regions).flat(2).length, 0);
+    tactileFilter.activeCount = activeCount;
+    tactileFilter.suppressedCount = suppressedCount;
+    tactileFilter.moduleStateCounts = tactileProcessingMode === "enhanced" ? moduleStateCounts : null;
+  }
+  renderTactileFilterPanel();
+  return processed;
 }
 
 function tactileHeatColor(value) {
@@ -406,20 +930,24 @@ function tactileHeatColor(value) {
   return `rgb(${rgb.join(",")})`;
 }
 
-function tactilePointDescription(label, rowIndex, columnIndex, value) {
-  return `${label} · ${t("row")} ${rowIndex + 1} · ${t("column")} ${columnIndex + 1} · ${t("sensorValue")} ${value}`;
+function tactilePointDescription(label, rowIndex, columnIndex, value, rawValue = null) {
+  const reading = rawValue === null
+    ? `${t("sensorValue")} ${value}`
+    : `${t("processedValue")} ${value} · ${t("rawValue")} ${rawValue}`;
+  return `${label} · ${t("row")} ${rowIndex + 1} · ${t("column")} ${columnIndex + 1} · ${reading}`;
 }
 
-function tactileRegionMarkup(name, values) {
+function tactileRegionMarkup(name, values, rawValues = null) {
   const rows = Array.isArray(values) ? values : [];
   const columns = rows.length && Array.isArray(rows[0]) ? rows[0].length : 0;
   if (!rows.length || !columns) return "";
   const label = copy[language].tactileRegions[name] || name;
   const displayRows = rows.map((row, rowIndex) => ({ row, rowIndex }));
   if (name === "palm") displayRows.reverse();
-  const cells = displayRows.flatMap(({ row, rowIndex }) => row.map((rawValue, columnIndex) => {
-    const value = Math.max(0, Math.min(4095, Number(rawValue) || 0));
-    const description = tactilePointDescription(label, rowIndex, columnIndex, value);
+  const cells = displayRows.flatMap(({ row, rowIndex }) => row.map((sourceValue, columnIndex) => {
+    const value = Math.max(0, Math.min(4095, Number(sourceValue) || 0));
+    const rawReading = rawValues === null ? null : Math.max(0, Math.min(4095, Number(rawValues?.[rowIndex]?.[columnIndex]) || 0));
+    const description = tactilePointDescription(label, rowIndex, columnIndex, value, rawReading);
     return `<span class="tactile-cell" style="--cell-color:${tactileHeatColor(value)}" data-row="${rowIndex}" data-column="${columnIndex}" data-tooltip="${escapeHtml(description)}"></span>`;
   })).join("");
   return `<section class="tactile-region" data-region="${name}"><header><strong>${escapeHtml(label)}</strong><span>${rows.length} × ${columns}</span></header><div class="tactile-matrix" style="--tactile-columns:${columns}">${cells}</div></section>`;
@@ -440,7 +968,7 @@ function tactileHandMarkup(side, hand) {
     ? [...fingerGroups].reverse().concat(palmGroups)
     : fingerGroups.concat(palmGroups);
   const groups = displayGroups.map(([groupName, regionNames]) => {
-    const regionMarkup = regionNames.map(name => tactileRegionMarkup(name, regions[name])).filter(Boolean).join("");
+    const regionMarkup = regionNames.map(name => tactileRegionMarkup(name, regions[name], hand?.raw_regions?.[name] || null)).filter(Boolean).join("");
     if (!regionMarkup) return "";
     return `<section class="tactile-digit ${groupName === "palm" ? "palm" : ""}"><h3>${escapeHtml(copy[language].tactileGroups[groupName])}</h3><div>${regionMarkup}</div></section>`;
   }).join("");
@@ -462,11 +990,13 @@ function updateTactileCells(selection, hands) {
       const valueCount = Array.isArray(rows) ? rows.reduce((total, row) => total + (Array.isArray(row) ? row.length : 0), 0) : 0;
       if (!columns || cells.length !== valueCount) return false;
       const label = copy[language].tactileRegions[name] || name;
+      const rawRows = hands[side]?.raw_regions?.[name] || null;
       cells.forEach(cell => {
         const rowIndex = Number(cell.dataset.row);
         const columnIndex = Number(cell.dataset.column);
         const value = Math.max(0, Math.min(4095, Number(rows[rowIndex]?.[columnIndex]) || 0));
-        updates.push({ cell, color: tactileHeatColor(value), description: tactilePointDescription(label, rowIndex, columnIndex, value) });
+        const rawValue = rawRows === null ? null : Math.max(0, Math.min(4095, Number(rawRows?.[rowIndex]?.[columnIndex]) || 0));
+        updates.push({ cell, color: tactileHeatColor(value), description: tactilePointDescription(label, rowIndex, columnIndex, value, rawValue) });
       });
     }
   }
@@ -502,14 +1032,16 @@ function renderTactile(tactile = {}) {
     ? `${sampleRate.toFixed(sampleRate >= 10 ? 0 : 1)} Hz`
     : "--";
 
-  const hands = tactile.hands || {};
-  const hasError = tactileSelection.some(side => hands[side]?.error);
-  const ready = tactileSelection.length > 0 && tactileSelection.every(side => Object.keys(hands[side]?.regions || {}).length > 0);
+  const rawHands = tactile.hands || {};
+  collectTactileBaselineSamples(rawHands);
+  const hands = tactileDisplayHands(rawHands);
+  const hasError = tactileSelection.some(side => rawHands[side]?.error);
+  const ready = tactileSelection.length > 0 && tactileSelection.every(side => Object.keys(rawHands[side]?.regions || {}).length > 0);
   const status = $('#tactile-status');
   status.textContent = t(hasError ? "tactileError" : ready ? "tactileReady" : "waitingTactile");
   $('.tactile-live-state .status-dot').className = `status-dot ${hasError ? "error" : ready ? "live" : ""}`;
 
-  const fingerprint = `${language}|${tactileSelection.join(",")}|${tactileSelection.map(side => `${side}:${hands[side]?.revision || 0}:${hands[side]?.error || ""}`).join("|")}`;
+  const fingerprint = `${language}|${tactileDisplayMode}|${tactileProcessingMode}|${tactileSelection.join(",")}|${tactileSelection.map(side => `${side}:${hands[side]?.revision || 0}:${hands[side]?.error || ""}`).join("|")}`;
   if (fingerprint === tactileFingerprint) return;
   tactileFingerprint = fingerprint;
   const container = $('#tactile-hands');
@@ -545,7 +1077,7 @@ function renderTactileCapture(capture = { state: "idle" }) {
   $('#capture-start').hidden = active;
   $('#capture-stop').hidden = !active;
   $('#capture-stop').disabled = state === "stopping";
-  $$('#tactile-side-selector button').forEach(button => { button.disabled = active; });
+  $$('#tactile-side-selector button').forEach(button => { button.disabled = active || tactileFilter.status === "calibrating"; });
 
   const tactileRate = Number(latestSnapshot?.tactile?.target_hz || latestConfig.tactile_frequency || 60);
   const mainRate = Number(latestConfig.frequency || 60);
@@ -574,7 +1106,7 @@ function renderTactileCapture(capture = { state: "idle" }) {
 }
 
 async function setTactileSelection(requestedSides) {
-  if (["recording", "stopping"].includes(latestCapture.state)) return;
+  if (["recording", "stopping"].includes(latestCapture.state) || tactileFilter.status === "calibrating") return;
   const enabledSides = ["left", "right"].filter(side => latestSnapshot?.[`${side}_enabled`]);
   if (!enabledSides.length) return;
   const nextSelection = enabledSides.length === 1
@@ -587,6 +1119,7 @@ async function setTactileSelection(requestedSides) {
   try {
     const result = await post("/api/tactile", { sides: nextSelection });
     tactileSelection = result.sides || nextSelection;
+    renderTactileFilterPanel();
   } catch (error) {
     addLocalLog("error", `${t("actionFailed")}: ${error.message}`);
   }
@@ -670,6 +1203,10 @@ function showCalibrationDialog(stage, detail = "") {
 }
 
 function renderCalibration(calibration = { state: "idle", detail: "" }) {
+  if (calibration.state === "completed" && lastForceCalibrationState !== "completed") {
+    resetTactileFilter("filterResetAfterForce");
+  }
+  lastForceCalibrationState = calibration.state || "idle";
   if (!["queued", "running", "completed", "failed"].includes(calibration.state)) return;
   showCalibrationDialog(calibration.state, calibration.detail || "");
 }
@@ -800,6 +1337,7 @@ $('#tracking-button').addEventListener("click", event => {
   else sendAction("pause");
 });
 $('#speed-button').addEventListener("click", () => sendAction("speed_mode"));
+$('#motion-filter-button').addEventListener("click", () => sendAction("motion_filter"));
 $('#force-calibration-button').addEventListener("click", () => confirmAction("calibrate_force"));
 $('#dialog-confirm').addEventListener("click", event => {
   if ($('#confirm-dialog').dataset.flow !== "calibration") return;
@@ -867,6 +1405,33 @@ $$('.nav-item').forEach(button => button.addEventListener("click", () => {
 $$('#tactile-side-selector button').forEach(button => button.addEventListener("click", () => {
   setTactileSelection(button.dataset.tactileSides.split(","));
 }));
+$$('#tactile-display-selector button').forEach(button => button.addEventListener("click", () => {
+  tactileDisplayMode = button.dataset.tactileDisplay;
+  tactileFingerprint = "";
+  renderTactileFilterPanel();
+  renderTactile(latestSnapshot?.tactile || {});
+}));
+$$('#tactile-processing-selector button').forEach(button => button.addEventListener("click", () => {
+  if (tactileFilter.status === "calibrating") return;
+  const nextMode = button.dataset.tactileProcessing;
+  if (nextMode === tactileProcessingMode) return;
+  tactileProcessingMode = nextMode;
+  tactileFilter.activeCount = null;
+  tactileFilter.suppressedCount = null;
+  tactileFilter.moduleStateCounts = null;
+  clearTactileTemporalState();
+  renderTactileFilterPanel();
+  renderTactile(latestSnapshot?.tactile || {});
+}));
+$('#tactile-filter-sensitivity').addEventListener("change", () => {
+  clearTactileTemporalState();
+  renderTactile(latestSnapshot?.tactile || {});
+});
+$('#tactile-drift-compensation').addEventListener("change", () => {
+  clearTactileTemporalState();
+  renderTactile(latestSnapshot?.tactile || {});
+});
+$('#tactile-zero-button').addEventListener("click", beginTactileBaselineLearning);
 $('#tactile-capture-form').addEventListener("input", () => {
   captureRequestError = "";
   $('#capture-error').textContent = "";

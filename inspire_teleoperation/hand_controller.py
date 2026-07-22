@@ -25,8 +25,10 @@ except ModuleNotFoundError:
 logger_mp = logging_mp.getLogger(__name__)
 JOINT_COUNT = 6
 SPEED_MODES = ("adaptive_v2", "adaptive_v1", "fixed")
+MOTION_FILTER_ALPHA = 0.65
 TACTILE_SAMPLE_HZ = 10.0
 MAX_TACTILE_SAMPLE_HZ = 60.0
+TACTILE_FORCE_SAMPLE_HZ = 10.0
 FORCE_CALIBRATION_MIN_WAIT_S = 0.5
 FORCE_CALIBRATION_STABLE_WINDOW_S = 0.5
 FORCE_CALIBRATION_POLL_INTERVAL_S = 0.02
@@ -320,6 +322,7 @@ class HandController:
         timeout: float = 3.0,
         target_speed: int = 300,
         speed_mode: str = "adaptive_v2",
+        motion_filter_enabled: bool = False,
         fps: float = 100.0,
         tactile_frequency: float = TACTILE_SAMPLE_HZ,
         xr_motion_data_ready_in: Value | None = None,
@@ -359,6 +362,8 @@ class HandController:
         self._fixed_speed = target_speed
         self._speed_mode = speed_mode
         self._speed_mode_lock = threading.Lock()
+        self._motion_filter_enabled = bool(motion_filter_enabled)
+        self._motion_filter_lock = threading.Lock()
         self._request_timeout = timeout
         self._dual_hand_data_lock = dual_hand_data_lock
         self._left_hand_array = left_hand_array
@@ -378,7 +383,14 @@ class HandController:
         self._tactile_condition = threading.Condition(self._tactile_lock)
         self._tactile_selection: tuple[str, ...] = ()
         self._tactile_frames: dict[
-            str, tuple[float, dict[str, list[list[int]]]]
+            str,
+            tuple[
+                float,
+                dict[str, list[list[int]]],
+                float | None,
+                list[int],
+                str,
+            ],
         ] = {}
         self._tactile_revisions: dict[str, int] = {}
         self._tactile_rates: dict[str, float] = {}
@@ -596,6 +608,35 @@ class HandController:
             self._speed_mode = SPEED_MODES[(index + 1) % len(SPEED_MODES)]
             return self._speed_mode
 
+    @property
+    def motion_filter_enabled(self) -> bool:
+        with self._motion_filter_lock:
+            return self._motion_filter_enabled
+
+    def set_motion_filter_enabled(self, enabled: bool) -> None:
+        """Request a thread-safe live motion-filter state change."""
+
+        with self._motion_filter_lock:
+            self._motion_filter_enabled = bool(enabled)
+
+    def toggle_motion_filter(self) -> bool:
+        with self._motion_filter_lock:
+            self._motion_filter_enabled = not self._motion_filter_enabled
+            return self._motion_filter_enabled
+
+    @staticmethod
+    def _smooth_motion_target(
+        target: np.ndarray, previous: np.ndarray | None
+    ) -> np.ndarray:
+        """Apply a low-lag EMA to one normalized six-joint target."""
+
+        if previous is None:
+            return target.copy()
+        return (
+            MOTION_FILTER_ALPHA * target
+            + (1.0 - MOTION_FILTER_ALPHA) * previous
+        )
+
     def calibrate_force_sensors(self) -> tuple[str, ...]:
         """Calibrate all hands and wait for a stable unloaded force window."""
 
@@ -726,6 +767,13 @@ class HandController:
                 hands[side] = {
                     "regions": {} if frame is None else frame[1],
                     "age_seconds": None if frame is None else max(0.0, now - frame[0]),
+                    "forces": [] if frame is None else frame[3],
+                    "force_age_seconds": (
+                        None
+                        if frame is None or frame[2] is None
+                        else max(0.0, now - frame[2])
+                    ),
+                    "force_error": "" if frame is None else frame[4],
                     "revision": self._tactile_revisions.get(side, 0),
                     "error": self._tactile_errors.get(side, ""),
                 }
@@ -740,6 +788,11 @@ class HandController:
         """Read one hand independently so dual-hand sampling runs in parallel."""
 
         sample_period = 1.0 / self._tactile_target_hz
+        force_period = 1.0 / TACTILE_FORCE_SAMPLE_HZ
+        next_force_at = 0.0
+        force_captured_at: float | None = None
+        forces: list[int] = []
+        force_error = ""
         while not self._stop_event.is_set():
             with self._tactile_condition:
                 self._tactile_condition.wait_for(
@@ -761,6 +814,22 @@ class HandController:
                     ).tolist()
                     for name, values in tactile.items()
                 }
+                force_reader = getattr(self._hands[side], "read_actual_forces", None)
+                if force_reader is not None and started_at >= next_force_at:
+                    next_force_at = started_at + force_period
+                    try:
+                        force_values = np.asarray(force_reader(), dtype=np.int16)
+                        if force_values.shape != (JOINT_COUNT,):
+                            raise RuntimeError(
+                                "actual forces must contain "
+                                f"{JOINT_COUNT} values, got {force_values.shape}"
+                            )
+                    except Exception as error:
+                        force_error = str(error)
+                    else:
+                        forces = force_values.astype(int, copy=False).tolist()
+                        force_captured_at = time.monotonic()
+                        force_error = ""
             except Exception as error:
                 message = str(error)
                 with self._tactile_condition:
@@ -787,7 +856,13 @@ class HandController:
                                     if previous_rate <= 0
                                     else 0.75 * previous_rate + 0.25 * measured_rate
                                 )
-                        self._tactile_frames[side] = (captured_at, regions)
+                        self._tactile_frames[side] = (
+                            captured_at,
+                            regions,
+                            force_captured_at,
+                            forces,
+                            force_error,
+                        )
                         self._tactile_revisions[side] = (
                             self._tactile_revisions.get(side, 0) + 1
                         )
@@ -812,6 +887,7 @@ class HandController:
     def _control_loop(self) -> None:
         targets = {side: self._initial_state[side].copy() for side in ("left", "right")}
         states = {side: self._initial_state[side].copy() for side in ("left", "right")}
+        filtered_targets: dict[str, np.ndarray] = {}
         planners_v1 = {
             side: AdaptiveSpeedPlanner(initial_speed=self._fixed_speed)
             for side in self._hands
@@ -825,6 +901,7 @@ class HandController:
             for side in self._hands
         }
         active_mode = self.speed_mode
+        active_motion_filter = self.motion_filter_enabled
         fixed_speeds = np.full(JOINT_COUNT, self._fixed_speed, dtype=int)
         for side in self._hands:
             self._publish_speeds(side, fixed_speeds)
@@ -840,6 +917,14 @@ class HandController:
             while not self._stop_event.is_set():
                 started_at = time.monotonic()
                 requested_mode = self.speed_mode
+                requested_motion_filter = self.motion_filter_enabled
+                if requested_motion_filter != active_motion_filter:
+                    active_motion_filter = requested_motion_filter
+                    filtered_targets.clear()
+                    logger_mp.info(
+                        "Hand motion micro-filter %s.",
+                        "enabled" if active_motion_filter else "disabled",
+                    )
                 speed_writes: dict[str, list[int]] = {}
                 if requested_mode != active_mode:
                     active_mode = requested_mode
@@ -879,6 +964,11 @@ class HandController:
                             target = self._normalize_targets(radians)
                             if not np.isfinite(target).all():
                                 raise ValueError("retargeting produced non-finite targets")
+                            if active_motion_filter:
+                                target = self._smooth_motion_target(
+                                    target, filtered_targets.get(side)
+                                )
+                                filtered_targets[side] = target.copy()
                             targets[side] = target
                             fresh_sides.add(side)
                         except (TypeError, ValueError) as error:

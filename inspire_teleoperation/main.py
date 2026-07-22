@@ -268,6 +268,12 @@ def main():
                     elif action == "speed_mode":
                         mode = hand_module.toggle_speed_mode()
                         logger_mp.info("Switched to %s joint speed mode.", mode)
+                    elif action == "motion_filter":
+                        enabled = hand_module.toggle_motion_filter()
+                        logger_mp.info(
+                            "Motion micro-filter %s.",
+                            "enabled" if enabled else "disabled",
+                        )
                     elif action == "calibrate_force":
                         if state.tracking_enabled:
                             state.apply_action("pause")
@@ -322,6 +328,9 @@ def main():
                             left_target=telemetry["left_target"],
                             right_target=telemetry["right_target"],
                             speed_mode=telemetry["speed_mode"],
+                            motion_filter_enabled=telemetry[
+                                "motion_filter_enabled"
+                            ],
                             left_speed=telemetry["left_speed"],
                             right_speed=telemetry["right_speed"],
                             modules={

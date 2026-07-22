@@ -106,6 +106,11 @@ class HandTeleopModule:
             raise RuntimeError("hand module has not been started")
         return self.controller.toggle_speed_mode()
 
+    def toggle_motion_filter(self) -> bool:
+        if self.controller is None:
+            raise RuntimeError("hand module has not been started")
+        return self.controller.toggle_motion_filter()
+
     def calibrate_force_sensors(self) -> tuple[str, ...]:
         """Calibrate force sensors on all connected hands."""
 
@@ -135,6 +140,9 @@ class HandTeleopModule:
                 "left_target": action[:6],
                 "right_target": action[6:],
                 "speed_mode": self.controller.speed_mode,
+                "motion_filter_enabled": bool(
+                    getattr(self.controller, "motion_filter_enabled", False)
+                ),
                 "left_speed": _read_shared(self.controller.left_hand_speed_array),
                 "right_speed": _read_shared(self.controller.right_hand_speed_array),
                 "tactile": (

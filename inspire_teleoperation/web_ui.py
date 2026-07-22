@@ -32,6 +32,7 @@ class TeleopSnapshot:
     left_target: tuple[float, ...]
     right_target: tuple[float, ...]
     speed_mode: str = "adaptive_v2"
+    motion_filter_enabled: bool = False
     left_speed: tuple[float, ...] = ()
     right_speed: tuple[float, ...] = ()
     modules: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -132,6 +133,16 @@ class _TactileCaptureSession:
                     side: {
                         "revision": revisions[index],
                         "regions": selected[index]["regions"],
+                        **(
+                            {
+                                "forces": selected[index]["forces"],
+                                "force_age_seconds": selected[index].get(
+                                    "force_age_seconds"
+                                ),
+                            }
+                            if selected[index].get("forces")
+                            else {}
+                        ),
                     }
                     for index, side in enumerate(self.sides)
                 },
@@ -324,6 +335,7 @@ class HandTeleoperationWebUI:
         "run",
         "pause",
         "speed_mode",
+        "motion_filter",
         "calibrate_force",
         "disconnect",
         "quit",
@@ -523,6 +535,7 @@ class HandTeleoperationWebUI:
                 "run",
                 "pause",
                 "speed_mode",
+                "motion_filter",
                 "calibrate_force",
             } and self._phase != "live":
                 raise ValueError("Hand controls are available only while connected")
