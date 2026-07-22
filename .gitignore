@@ -12,6 +12,9 @@ __pycache__/
 # Local test suite
 tests/
 
+# Local tactile capture data
+tactile_captures/
+
 # Local agent instructions
 AGENTS.md
 
