@@ -1,7 +1,7 @@
 <robot name="inspire_hand_left">
 
   <mujoco>
-    <compiler meshdir="./meshes" discardvisual="false" />
+    <compiler meshdir="." discardvisual="true" />
   </mujoco>
 
   <link name="L_hand_base_link">

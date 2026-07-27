@@ -909,6 +909,8 @@ TeleopSnapshot(
 | `wait_for_setup()` | 阻塞等待 setup；先收到 quit 时返回 `None` |
 | `submit_action(action)` | 校验动作并放入线程安全队列 |
 | `poll_action()` | 非阻塞取出最早动作；队列为空返回 `None` |
+| `submit_simulation_command(payload)` | 校验仿真启动、关闭、桌面标定开关/重标定或腕部零位捕获命令 |
+| `poll_simulation_command()` | 非阻塞取出最早仿真命令；队列为空返回 `None` |
 | `set_calibration_state(state, detail="")` | 发布力校准的排队、运行或终态 |
 | `acknowledge_calibration()` | 用户确认终态后将校准状态恢复为 `idle` |
 | `submit_tactile_selection(sides)` | 选择要低频采集触觉数据的已接入手部 |
@@ -949,7 +951,17 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
     "left_speed": [0, 0, 0, 0, 0, 0],
     "right_speed": [200, 200, 200, 200, 180, 160],
     "modules": {
-      "hands": {"ready": true, "detail": ""}
+      "hands": {"ready": true, "detail": "", "telemetry": {}},
+      "yam_simulation": {
+        "ready": true,
+        "detail": "running",
+        "telemetry": {
+          "active": true,
+          "lifecycle": "running",
+          "zero_capture_delay_s": 3.0,
+          "table_calibration": {"calibrated": false, "captured_count": 1}
+        }
+      }
     },
     "tactile": {
       "sample_hz": 9.8,
@@ -1031,11 +1043,17 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
   "start": false,
   "open_on_exit": false,
   "hide_hand_markers": false,
+  "simulation_enabled": true,
+  "simulation_auto_start": false,
+  "simulation_viewer": true,
+  "simulation_gpu": "nvidia",
+  "simulation_zero_delay": 3.0,
+  "simulation_table_calibration": true,
   "safety_confirmed": true
 }
 ```
 
-约束：至少启用一只手；启用手的主机不能为空或包含空白；同时启用左右手时，两者
+约束：至少启用一只真机手或双臂仿真；启用手的主机不能为空或包含空白；同时启用左右手时，两者
 不能使用相同主机地址（比较时忽略主机名大小写）；端口 1～65535；设备 ID 1～254；
 超时和 Quest/手部频率为正数；`tactile_frequency` 范围为 1～60 Hz；目标速度
 0～1000；`speed_mode` 支持
@@ -1050,6 +1068,9 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
 
 设置只允许在 `setup` 阶段提交。设备断开后服务会重新进入 `setup`，保留上次配置，
 可修改后再次提交，无需重启 Python 进程。验证失败返回 HTTP 400 和 `error` 字符串。
+`simulation_table_calibration=false` 时跳过三点桌面标定，仿真沿用默认 Quest
+坐标映射，并直接进入腕部零位捕获。
+
 浏览器还会把设备启用状态、地址、设备 ID、通信/触觉频率、速度策略及会话选项保存到
 本机 `localStorage`，刷新页面或重启服务后会优先恢复。安全确认不会缓存，每次连接前
 仍需人工重新勾选。触觉文件采集的频率、时间和输出路径也会单独保存在本机浏览器中。
@@ -1095,6 +1116,55 @@ Content-Type: application/json
 
 成功后校准状态恢复为 `idle`，弹窗关闭。校准仍为 `queued` 或 `running` 时确认请求
 返回 HTTP 400。
+
+### 10.4.1 `POST /api/simulation`
+
+该接口只在 `live` 会话中可用。命令通过独立队列交给主控制线程执行，因此不会在
+HTTP 工作线程中直接创建或关闭 MuJoCo。
+
+Web 一级“仿真控制”菜单在 `setup` 阶段即可打开。点击“连接 Quest”
+会先调用 `POST /api/setup`，强制提交
+`left_enabled=false`、`right_enabled=false`、`simulation_enabled=true` 和
+`simulation_auto_start=false`、`start=false`，因此不需要经过真机设备接入表单，
+也不会立即创建 MuJoCo。进入 `live` 后再点击“启动仿真”才执行
+`{"command":"start"}`；跟踪控制、Quest 状态、仿真生命周期、桌面标定和腕部零位
+操作都保留在该菜单中，实时控制页不再显示跟踪状态。
+
+启动仿真并设定腕部零位捕获延时：
+
+```json
+{"command": "start", "delay_seconds": 3.0}
+```
+
+关闭仿真：
+
+```json
+{"command": "stop"}
+```
+
+清除当前桌面坐标和双腕零位，重新执行三点桌面标定：
+
+```json
+{"command": "calibrate_table"}
+```
+
+启用或跳过桌面标定：
+
+```json
+{"command": "set_table_calibration", "enabled": false}
+```
+
+在桌面标定完成后重新捕获腕部零位：
+
+```json
+{"command": "capture_pose", "side": "both", "delay_seconds": 2.0}
+```
+
+`side` 支持 `left`、`right` 和 `both`；延时范围为 0～30 秒。重新标定桌面时
+会自动启用桌面标定，两臂立即保持当前位置并清除旧坐标；完成第三点后自动按当前
+延时开始双腕零位捕获。关闭桌面标定时同样清除旧桌面参考与双腕零位，然后使用默认
+Quest 坐标映射直接开始新的双腕零位倒计时。
+关闭仿真只释放 MuJoCo、IK 和仿真手资源，不断开 Quest 或真机 Modbus 手。
 
 ### 10.5 `POST /api/tactile`
 

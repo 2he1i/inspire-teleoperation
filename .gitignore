@@ -9,11 +9,20 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Operating system metadata
+.DS_Store
+
+# Runtime logs
+MUJOCO_LOG.TXT
+
 # Local test suite
 tests/
 
 # Local tactile capture data
 tactile_captures/
+
+# Local reference assets
+/YAM Pro URDF/
 
 # Local agent instructions
 AGENTS.md

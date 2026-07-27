@@ -285,6 +285,9 @@ class _RequestHandler(BaseHTTPRequestHandler):
             elif self.path == "/api/calibration/ack":
                 calibration = self.server.web_ui.acknowledge_calibration()
                 self._json(HTTPStatus.OK, {"ok": True, "calibration": calibration})
+            elif self.path == "/api/simulation":
+                command = self.server.web_ui.submit_simulation_command(payload)
+                self._json(HTTPStatus.ACCEPTED, {"ok": True, "command": command})
             else:
                 self.send_error(HTTPStatus.NOT_FOUND)
         except (OSError, TypeError, ValueError) as error:
@@ -352,6 +355,7 @@ class HandTeleoperationWebUI:
         self._setup_config = self._config_from_args(args)
         self._pending_setup: dict[str, Any] | None = None
         self._actions: deque[str] = deque()
+        self._simulation_commands: deque[dict[str, Any]] = deque()
         self._messages: deque[dict[str, str]] = deque(maxlen=300)
         self._snapshot: TeleopSnapshot | None = None
         self._tactile_selection: tuple[str, ...] = ()
@@ -382,6 +386,14 @@ class HandTeleoperationWebUI:
             "start": args.start,
             "open_on_exit": args.open_on_exit,
             "hide_hand_markers": args.hide_hand_markers,
+            "simulation_enabled": args.simulation,
+            "simulation_auto_start": args.simulation_auto_start,
+            "simulation_viewer": args.simulation_viewer,
+            "simulation_gpu": args.simulation_gpu,
+            "simulation_zero_delay": args.simulation_zero_delay,
+            "simulation_table_calibration": (
+                args.simulation_table_calibration
+            ),
         }
 
     @property
@@ -428,6 +440,9 @@ class HandTeleoperationWebUI:
             "target_speed", "speed_mode", "frequency", "hand_frequency",
             "tactile_frequency",
             "start", "open_on_exit", "hide_hand_markers", "safety_confirmed",
+            "simulation_enabled", "simulation_viewer", "simulation_gpu",
+            "simulation_zero_delay", "simulation_table_calibration",
+            "simulation_auto_start",
         }
         missing = required.difference(payload)
         if missing:
@@ -453,8 +468,9 @@ class HandTeleoperationWebUI:
 
         left_enabled = boolean("left_enabled")
         right_enabled = boolean("right_enabled")
-        if not left_enabled and not right_enabled:
-            raise ValueError("At least one hand must be enabled")
+        simulation_enabled = boolean("simulation_enabled")
+        if not left_enabled and not right_enabled and not simulation_enabled:
+            raise ValueError("Enable at least one real hand or the YAM simulation")
         if not boolean("safety_confirmed"):
             raise ValueError("Confirm that the hand workspace is clear before connecting")
 
@@ -487,6 +503,16 @@ class HandTeleoperationWebUI:
         tactile_frequency = number("tactile_frequency")
         if tactile_frequency > 60:
             raise ValueError("tactile_frequency must be in the range 1..60")
+        simulation_gpu = payload["simulation_gpu"]
+        if simulation_gpu not in {"nvidia", "system"}:
+            raise ValueError("simulation_gpu must be nvidia or system")
+        simulation_zero_delay = payload["simulation_zero_delay"]
+        if (
+            isinstance(simulation_zero_delay, bool)
+            or not isinstance(simulation_zero_delay, (int, float))
+            or not 0 <= simulation_zero_delay <= 30
+        ):
+            raise ValueError("simulation_zero_delay must be in the range 0..30")
         return {
             "left_enabled": left_enabled,
             "left_host": left_host,
@@ -504,6 +530,14 @@ class HandTeleoperationWebUI:
             "start": boolean("start"),
             "open_on_exit": boolean("open_on_exit"),
             "hide_hand_markers": boolean("hide_hand_markers"),
+            "simulation_enabled": simulation_enabled,
+            "simulation_auto_start": boolean("simulation_auto_start"),
+            "simulation_viewer": boolean("simulation_viewer"),
+            "simulation_gpu": simulation_gpu,
+            "simulation_zero_delay": float(simulation_zero_delay),
+            "simulation_table_calibration": boolean(
+                "simulation_table_calibration"
+            ),
         }
 
     def submit_setup(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -539,6 +573,14 @@ class HandTeleoperationWebUI:
                 "calibrate_force",
             } and self._phase != "live":
                 raise ValueError("Hand controls are available only while connected")
+            if (
+                action in {"speed_mode", "motion_filter", "calibrate_force"}
+                and not any(
+                    self._setup_config[f"{side}_enabled"]
+                    for side in ("left", "right")
+                )
+            ):
+                raise ValueError("No real dexterous hand is enabled")
             if action == "disconnect" and self._phase not in {
                 "connecting", "live", "error"
             }:
@@ -558,6 +600,59 @@ class HandTeleoperationWebUI:
     def poll_action(self) -> str | None:
         with self._condition:
             return self._actions.popleft() if self._actions else None
+
+    def submit_simulation_command(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Validate and queue one simulation lifecycle/calibration command."""
+
+        command = payload.get("command")
+        if command not in {
+            "start",
+            "stop",
+            "calibrate_table",
+            "capture_pose",
+            "set_table_calibration",
+        }:
+            raise ValueError(
+                "simulation command must be start, stop, calibrate_table, "
+                "capture_pose, or set_table_calibration"
+            )
+        normalized: dict[str, Any] = {"command": command}
+        if command in {"start", "capture_pose"}:
+            delay = payload.get(
+                "delay_seconds",
+                self._setup_config["simulation_zero_delay"],
+            )
+            if (
+                isinstance(delay, bool)
+                or not isinstance(delay, (int, float))
+                or not 0 <= delay <= 30
+            ):
+                raise ValueError("delay_seconds must be in the range 0..30")
+            normalized["delay_seconds"] = float(delay)
+        if command == "capture_pose":
+            side = payload.get("side", "both")
+            if side not in {"left", "right", "both"}:
+                raise ValueError("capture side must be left, right, or both")
+            normalized["side"] = side
+        if command == "set_table_calibration":
+            enabled = payload.get("enabled")
+            if not isinstance(enabled, bool):
+                raise TypeError("table calibration enabled must be a boolean")
+            normalized["enabled"] = enabled
+        with self._condition:
+            if self._phase != "live":
+                raise ValueError(
+                    "Simulation controls are available only while connected"
+                )
+            self._simulation_commands.append(normalized)
+            self._condition.notify_all()
+        return dict(normalized)
+
+    def poll_simulation_command(self) -> dict[str, Any] | None:
+        with self._condition:
+            if not self._simulation_commands:
+                return None
+            return dict(self._simulation_commands.popleft())
 
     def set_calibration_state(self, state: str, detail: str = "") -> None:
         """Publish the asynchronous force-calibration lifecycle to the Web UI."""
@@ -733,6 +828,7 @@ class HandTeleoperationWebUI:
             self._actions = deque(
                 action for action in self._actions if action == "quit"
             )
+            self._simulation_commands.clear()
             self._condition.notify_all()
 
     def publish(self, snapshot: TeleopSnapshot) -> None:

@@ -11,23 +11,33 @@ requires-python = ">=3.10,<3.13"
 dependencies = [
     "dex-retargeting",
     "logging-mp>=0.2.2",
+    "mink>=0.0.13,<1.0",
+    "mujoco>=3.3.5,<4.0",
     "numpy>=1.26,<2.0",
     "params-proto==2.13.0",
     "pymodbus>=3.7,<4.0",
+    "qpsolvers[quadprog]>=4.7,<5.0",
     "pyyaml>=6.0",
     "televuer==4.0.0",
 ]
 
 [project.scripts]
 inspire-teleoperation = "inspire_teleoperation.main:main"
+inspire-yam-sim = "inspire_teleoperation.yam_sim_main:main"
 
 [tool.setuptools.package-data]
 inspire_teleoperation = [
     "assets/hand_model/*.yml",
     "assets/hand_model/*.urdf",
     "assets/hand_model/meshes/*.STL",
+    "assets/yam_pro/*.xml",
+    "assets/yam_pro/*.yml",
+    "assets/yam_pro/meshes/*.stl",
     "web/*",
 ]
+
+[tool.setuptools.packages.find]
+include = ["inspire_teleoperation*"]
 
 [tool.uv.sources]
 dex-retargeting = { git = "https://github.com/silencht/dex-retargeting", rev = "d7753d38c9ff11f80bafea6cd168351fd3db9b0e" }

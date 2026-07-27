@@ -3,36 +3,40 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 const copy = {
   zh: {
-    workspace: "工作区", connection: "设备接入", dashboard: "实时控制", tactile: "触觉反馈", systemLog: "系统日志", systemState: "系统状态", localConsole: "本地控制台", preferences: "界面设置", appearance: "外观",
+    workspace: "工作区", connection: "设备接入", dashboard: "实时控制", simulationNav: "仿真控制", tactile: "触觉反馈", systemLog: "系统日志", systemState: "系统状态", localConsole: "本地控制台", preferences: "界面设置", appearance: "外观",
     setupEyebrow: "设备接入", setupTitle: "建立遥操作连接", setupLead: "配置设备与控制策略，确认安全后启动会话。", stepConfigure: "配置", stepConnect: "连接", stepControl: "控制",
     devices: "设备", devicesHelp: "选择要控制的灵巧手并确认网络地址", oneRequired: "至少启用一台", leftHand: "左手", rightHand: "右手", host: "主机地址", deviceId: "设备 ID",
+    simulationSetup: "双臂仿真", simulationSetupHelp: "在同一 Quest 会话中运行双 YAM 与双灵巧手 MuJoCo 仿真", simulationSessionSetup: "仿真会话配置", simulationSessionSetupHelp: "无需接入 Modbus 设备，先连接 Quest，再手动启动仿真", connectQuestSession: "连接 Quest", disconnectSimulation: "退出仿真会话", simulationTracking: "仿真同步", simulationSafetyTitle: "操作仿真前", simulationSafetyPause: "调整零位或桌面坐标前先停止同步", simulationGpu: "渲染 GPU", systemGpu: "系统默认", zeroCaptureDelay: "零位捕获延时", openSimulationViewer: "打开 MuJoCo 窗口", openSimulationViewerHelp: "窗口关闭不影响 Web 服务", enableTableCalibration: "执行桌面标定", enableTableCalibrationHelp: "关闭后直接捕获腕部零位",
     controlParams: "控制策略", controlHelp: "设置通信频率与关节运动速度", port: "Modbus 端口", timeout: "请求超时", speedMode: "速度模式", adaptive: "自适应 2.0", adaptive_v2: "自适应 2.0", adaptive_v1: "自适应 1.0", fixed: "固定速度", fixedSpeed: "固定速度", fixedSpeedHint: "仅固定模式生效", questRate: "Quest 采样率", handRate: "手部指令率", tactileRateSetting: "触觉轮询率", tactileRateHint: "范围 1–60 Hz，仅在触觉页采集",
     advancedOptions: "会话选项", advancedHint: "跟踪启动、标记显示与断开行为", startNow: "连接后立即跟踪", startNowHelp: "工作区清空时使用", hideMarkers: "隐藏 Quest 标记", hideMarkersHelp: "不影响数据采集", openExit: "断开设备时张手", openExitHelp: "安装工具时保持关闭",
     safetyCheck: "连接前检查", safetyIntro: "设备可能在连接后立即运动", checkWorkspace: "设备固定与线缆状态已检查", checkNetwork: "设备地址与网络已确认", checkSpeed: "已选择合适的速度策略", safetyConfirm: "我确认工作区内没有人员、工具或易损物体", safetyDetail: "此确认是建立设备连接的必要条件。", connect: "连接设备", localOnly: "仅在本机建立连接",
-    liveEyebrow: "实时遥操作", dashboardTitle: "运行控制台", dashboardLead: "监控连接、数据链路与关节状态。", session: "会话", teleopStatus: "遥操作状态", questData: "Quest 数据", loopRate: "主循环频率", safetyTitle: "进入工作区前", safetyPause: "请先停止跟踪", run: "开始跟踪", stopTracking: "停止跟踪", switchSpeed: "切换速度", motionFilterOff: "微滤波：关", motionFilterOn: "微滤波：开", calibrateForce: "力传感器校准", disconnect: "断开设备",
+    liveEyebrow: "实时遥操作", dashboardTitle: "运行控制台", dashboardLead: "监控连接、数据链路与关节状态。", session: "会话", teleopStatus: "遥操作状态", questData: "Quest 数据", loopRate: "主循环频率", safetyTitle: "进入工作区前", safetyPause: "请先停止同步", run: "开始同步", stopTracking: "停止同步", switchSpeed: "切换速度", motionFilterOff: "微滤波：关", motionFilterOn: "微滤波：开", calibrateForce: "力传感器校准", disconnect: "断开设备",
+    simulationEyebrow: "仿真工作区", simulationPageTitle: "双臂仿真控制", simulationPageLead: "启动或关闭 MuJoCo，并管理桌面坐标与双腕零位。", simulationTitle: "双 YAM 仿真", simulationStopped: "已关闭", simulationStarting: "正在启动", simulationRunning: "运行中", simulationStopping: "正在关闭", simulationError: "仿真错误", simulationStoppedDetail: "仿真尚未启动", startSimulation: "启动仿真", stopSimulation: "关闭仿真", calibrateTable: "重新标定桌面", tableCalibration: "桌面标定", tablePending: "等待三点标定", tableComplete: "3/3 已完成", tableSkipped: "已跳过", tableSkippedHelp: "使用默认 Quest 坐标映射，直接捕获腕部零位", recaptureLeft: "重捕获左腕", recaptureRight: "重捕获右腕", recaptureBoth: "重捕获双腕", leftArm: "左臂", rightArm: "右臂", armTracking: "同步中", armWaiting: "等待追踪", simulationCommandFailed: "仿真操作失败",
     tactileEyebrow: "触觉反馈", tactileTitle: "触觉热力图", tactileLead: "查看每个触觉区域的压力分布，悬停方格可读取精确数值。", bothHands: "双手", tactileStatus: "数据状态", sampleRate: "采样频率", waitingTactile: "等待首帧", tactileReady: "数据已更新", tactileNoData: "正在读取触觉数据…", tactileError: "读取失败", row: "行", column: "列", sensorValue: "数值", rawValue: "原始值", processedValue: "净化值",
     filterTitle: "噪声处理", filterLead: "在基础逐点滤波与力辅助增强方案之间按场景切换", filterUncalibrated: "待零点学习", filterCalibrating: "正在学习", filterCalibrated: "已启用", filterIncomplete: "部分手部待学习", filterFailed: "学习失败", filterStepPrepare: "保持灵巧手悬空、静止", filterStepLearn: "学习 3 秒静态零点", filterStepUse: "查看净化后的触觉", filterDisplay: "热力图数据", filterProcessed: "净化后", filterRaw: "原始值", filterAlgorithm: "处理方案", filterBasic: "基础滤波", filterEnhanced: "力辅助增强", filterSensitivity: "灵敏度", filterSensitive: "灵敏", filterBalanced: "均衡（推荐）", filterStable: "稳定", filterBasicDrift: "缓慢漂移补偿", filterBasicDriftHelp: "仅在未检测到接触时微调逐点零点", filterDrift: "力辅助基线恢复", filterDriftHelp: "无接触时慢跟踪；确认卸载后恢复压后偏移", filterCalibrate: "学习静态零点", filterRecalibrate: "重新学习零点", filterCancel: "取消学习", filterReadyHint: "预热并保持无接触后开始；每次重连或底层力校准后请重新学习", filterKeepStill: "请勿触碰 · 正在学习触觉与六路力零点", filterComplete: "静态零点学习完成，两套处理方案均可使用", filterCompleteNoForce: "触觉零点学习完成；基础滤波可用，增强方案采用保守恢复模式", filterNotEnoughSamples: "有效样本不足，请确认触觉数据正常后重试", filterSelectHand: "请先选择并等待手部触觉数据", filterBaselinePoints: "已学习触点", filterActivePoints: "当前接触", filterSuppressedPoints: "本帧抑制", filterModuleStates: "模块状态", filterNoContactShort: "空闲", filterContactShort: "接触", filterRecoveryShort: "恢复", filterRawCaptureNote: "处理只影响热力图；下方采集文件保存原始触觉及同步六路力数据，便于复查和离线标定。", filterResetAfterForce: "底层力校准已完成，请重新学习触觉与六路力静态零点。",
     captureTitle: "触觉信息采集", captureLead: "按指定频率将当前所选手部的触觉帧流式写入文件", captureFrequency: "采集频率", captureFrequencyHint: "不得高于当前触觉数据率", captureDuration: "采集时间", captureDurationHint: "最长 24 小时", captureOutput: "输出路径", captureOutputHint: "可填写目录或以 .jsonl 结尾的文件路径", captureFormat: "输出格式", captureFormatHint: "每行一帧，支持流式读取", captureStart: "开始采集", captureStop: "停止采集", captureIdle: "未开始", captureRecording: "采集中", captureStopping: "正在停止", captureCompleted: "采集完成", captureStopped: "已停止", captureFailed: "采集失败", captureWaiting: "等待开始采集", captureSamples: "帧", captureSavedTo: "输出文件", captureSelectHand: "请先选择要采集的手部。", captureProgress: "采集进度", captureDropped: "丢弃帧",
     joint: "关节", position: "实际 / 目标", speed: "速度", sixJoints: "6 个关节", latestEvents: "最近 4 条运行事件", viewAllLogs: "查看全部", logsEyebrow: "运行记录", logsLead: "查看当前控制会话的完整运行事件。", logEntries: "条记录", clearLogs: "清空日志", currentSession: "当前会话", realtimeUpdates: "日志实时更新", liveUpdate: "实时", time: "时间", clear: "清空", level: "级别", event: "事件", noEvents: "暂无运行日志",
-    cancel: "取消", confirm: "确认", waitingSetup: "等待配置", connecting: "正在连接", disconnecting: "正在断开", live: "已连接", stopping: "正在停止", stopped: "已停止", error: "连接错误", paused: "跟踪已停止", running: "正在跟踪", waitingData: "等待手部数据", ready: "数据就绪", unavailable: "无数据", connected: "已连接", enabled: "已启用", disabled: "未启用",
+    cancel: "取消", confirm: "确认", waitingSetup: "等待配置", connecting: "正在连接", disconnecting: "正在断开", live: "已连接", stopping: "正在停止", stopped: "已停止", error: "连接错误", paused: "同步已停止", running: "正在同步", waitingData: "等待手部数据", ready: "数据就绪", unavailable: "无数据", connected: "已连接", enabled: "已启用", disabled: "未启用",
     fontSize: "界面字号", fontSizeHelp: "输入精确字号，整个控制台会按比例调整。", themeColor: "主题色", themeColorHelp: "选择预设颜色，或使用自定义颜色。", customColor: "自定义", resetAppearance: "恢复默认", shutdownService: "关闭控制服务", disconnectBeforeShutdown: "请先断开设备，再关闭控制服务。",
-    setupFailed: "无法提交配置", enableOneHandError: "请至少启用一只手。", duplicateHostError: "左右手不能使用相同的主机地址。", safetyConfirmationError: "请勾选工作区安全确认。", invalidSettingsError: "请检查高亮的设备地址或控制参数。", actionFailed: "操作失败", runTitle: "开始手部跟踪？", runCopy: "确认双手工作区已经清空。开始后，Quest 手势将实时驱动灵巧手。", calibrateForceTitle: "校准力传感器？", calibrateForceCopy: "移除灵巧手上的外力与接触物。确认后将停止跟踪，并校准所有已连接的手。", calibrationRequested: "正在校准力传感器，请保持灵巧手不受外力。", calibrationRunningTitle: "正在校准", calibrationRunningCopy: "正在等待最短校准时间并验证六路力值稳定，请勿接触灵巧手。", calibrationCompletedTitle: "校准完成", calibrationCompletedCopy: "所有已连接灵巧手的零点力值已经稳定。确认后关闭此窗口。", calibrationFailedTitle: "校准失败", calibrationFailedCopy: "力值未能稳定或设备通信失败。", acknowledge: "确定", disconnectTitle: "断开当前设备？", disconnectCopy: "跟踪将停止，Modbus 与 Quest 会话将关闭。随后可以立即修改设备接入设置并重新连接。", quitTitle: "关闭控制服务？", quitCopy: "所有设备会断开，当前页面也将停止提供服务。下次使用需要重新启动程序。", jointNames: ["小指", "无名指", "中指", "食指", "拇指", "旋转"], tactileRegions: { little_tip: "小指尖", little_nail: "小指背", little_pad: "小指腹", ring_tip: "无名指尖", ring_nail: "无名指背", ring_pad: "无名指腹", middle_tip: "中指尖", middle_nail: "中指背", middle_pad: "中指腹", index_tip: "食指尖", index_nail: "食指背", index_pad: "食指腹", thumb_tip: "拇指尖", thumb_nail: "拇指背", thumb_middle: "拇指中部", thumb_pad: "拇指腹", palm: "掌心" }, tactileGroups: { little: "小指", ring: "无名指", middle: "中指", index: "食指", thumb: "拇指", palm: "掌心" }
+    setupFailed: "无法提交配置", enableOneHandError: "请至少启用一只手。", duplicateHostError: "左右手不能使用相同的主机地址。", safetyConfirmationError: "请勾选工作区安全确认。", invalidSettingsError: "请检查高亮的设备地址或控制参数。", actionFailed: "操作失败", runTitle: "开始 Quest 同步？", runCopy: "确认仿真零位和桌面坐标已经设置妥当。开始后，Quest 双手将实时驱动仿真机械臂。", calibrateForceTitle: "校准力传感器？", calibrateForceCopy: "移除灵巧手上的外力与接触物。确认后将停止跟踪，并校准所有已连接的手。", calibrationRequested: "正在校准力传感器，请保持灵巧手不受外力。", calibrationRunningTitle: "正在校准", calibrationRunningCopy: "正在等待最短校准时间并验证六路力值稳定，请勿接触灵巧手。", calibrationCompletedTitle: "校准完成", calibrationCompletedCopy: "所有已连接灵巧手的零点力值已经稳定。确认后关闭此窗口。", calibrationFailedTitle: "校准失败", calibrationFailedCopy: "力值未能稳定或设备通信失败。", acknowledge: "确定", disconnectTitle: "断开当前会话？", disconnectCopy: "同步将停止，Quest 与仿真会话将关闭，随后可以直接重新启动仿真。", quitTitle: "关闭控制服务？", quitCopy: "所有设备会断开，当前页面也将停止提供服务。下次使用需要重新启动程序。", jointNames: ["小指", "无名指", "中指", "食指", "拇指", "旋转"], tactileRegions: { little_tip: "小指尖", little_nail: "小指背", little_pad: "小指腹", ring_tip: "无名指尖", ring_nail: "无名指背", ring_pad: "无名指腹", middle_tip: "中指尖", middle_nail: "中指背", middle_pad: "中指腹", index_tip: "食指尖", index_nail: "食指背", index_pad: "食指腹", thumb_tip: "拇指尖", thumb_nail: "拇指背", thumb_middle: "拇指中部", thumb_pad: "拇指腹", palm: "掌心" }, tactileGroups: { little: "小指", ring: "无名指", middle: "中指", index: "食指", thumb: "拇指", palm: "掌心" }
   },
   en: {
-    workspace: "Workspace", connection: "Device setup", dashboard: "Live control", tactile: "Tactile feedback", systemLog: "System log", systemState: "System state", localConsole: "Local console", preferences: "Interface settings", appearance: "Appearance",
+    workspace: "Workspace", connection: "Device setup", dashboard: "Live control", simulationNav: "Simulation", tactile: "Tactile feedback", systemLog: "System log", systemState: "System state", localConsole: "Local console", preferences: "Interface settings", appearance: "Appearance",
     setupEyebrow: "Device setup", setupTitle: "Start a teleoperation session", setupLead: "Configure devices and control behavior, then complete the safety check.", stepConfigure: "Configure", stepConnect: "Connect", stepControl: "Control",
     devices: "Devices", devicesHelp: "Choose each dexterous hand and verify its network address", oneRequired: "One required", leftHand: "Left hand", rightHand: "Right hand", host: "Host address", deviceId: "Device ID",
+    simulationSetup: "Dual-arm simulation", simulationSetupHelp: "Run dual YAM and dual dexterous-hand MuJoCo simulation in the same Quest session", simulationSessionSetup: "Simulation session", simulationSessionSetupHelp: "Connect Quest first, then start simulation manually; no Modbus device is required", connectQuestSession: "Connect Quest", disconnectSimulation: "Exit simulation session", simulationTracking: "Simulation sync", simulationSafetyTitle: "Before adjusting simulation", simulationSafetyPause: "Stop sync before changing zero poses or the table frame", simulationGpu: "Render GPU", systemGpu: "System default", zeroCaptureDelay: "Zero-pose delay", openSimulationViewer: "Open MuJoCo window", openSimulationViewerHelp: "Closing it does not stop the Web service", enableTableCalibration: "Use table calibration", enableTableCalibrationHelp: "When off, wrist-zero capture starts directly",
     controlParams: "Control strategy", controlHelp: "Set communication rates and joint motion speed", port: "Modbus port", timeout: "Request timeout", speedMode: "Speed mode", adaptive: "Adaptive 2.0", adaptive_v2: "Adaptive 2.0", adaptive_v1: "Adaptive 1.0", fixed: "Fixed speed", fixedSpeed: "Fixed speed", fixedSpeedHint: "Used in fixed mode only", questRate: "Quest polling", handRate: "Hand command rate", tactileRateSetting: "Tactile polling", tactileRateHint: "1–60 Hz; sampled only on the tactile page",
     advancedOptions: "Session options", advancedHint: "Tracking start, marker display, and disconnect behavior", startNow: "Track immediately", startNowHelp: "Use only in a clear workspace", hideMarkers: "Hide Quest markers", hideMarkersHelp: "Capture is unaffected", openExit: "Open hands on disconnect", openExitHelp: "Keep off when tools are attached",
     safetyCheck: "Preflight check", safetyIntro: "Devices may move immediately after connection", checkWorkspace: "Device mounting and cables checked", checkNetwork: "Device addresses and network verified", checkSpeed: "Appropriate speed strategy selected", safetyConfirm: "I confirm the workspaces are clear of people, tools, and fragile objects", safetyDetail: "This confirmation is required to establish a connection.", connect: "Connect devices", localOnly: "Connection stays on this machine",
-    liveEyebrow: "Live teleoperation", dashboardTitle: "Operations console", dashboardLead: "Monitor connections, data flow, and joint state.", session: "Session", teleopStatus: "Teleop status", questData: "Quest data", loopRate: "Main loop rate", safetyTitle: "Before entering workspace", safetyPause: "Stop tracking first", run: "Start tracking", stopTracking: "Stop tracking", switchSpeed: "Switch speed", motionFilterOff: "Micro-filter: Off", motionFilterOn: "Micro-filter: On", calibrateForce: "Calibrate force sensors", disconnect: "Disconnect devices",
+    liveEyebrow: "Live teleoperation", dashboardTitle: "Operations console", dashboardLead: "Monitor connections, data flow, and joint state.", session: "Session", teleopStatus: "Teleop status", questData: "Quest data", loopRate: "Main loop rate", safetyTitle: "Before entering workspace", safetyPause: "Stop sync first", run: "Start sync", stopTracking: "Stop sync", switchSpeed: "Switch speed", motionFilterOff: "Micro-filter: Off", motionFilterOn: "Micro-filter: On", calibrateForce: "Calibrate force sensors", disconnect: "Disconnect devices",
+    simulationEyebrow: "Simulation workspace", simulationPageTitle: "Dual-arm simulation control", simulationPageLead: "Start or close MuJoCo and manage the table frame and wrist zero poses.", simulationTitle: "Dual YAM simulation", simulationStopped: "Stopped", simulationStarting: "Starting", simulationRunning: "Running", simulationStopping: "Stopping", simulationError: "Simulation error", simulationStoppedDetail: "Simulation has not started", startSimulation: "Start simulation", stopSimulation: "Close simulation", calibrateTable: "Recalibrate table", tableCalibration: "Table calibration", tablePending: "Waiting for three points", tableComplete: "3/3 complete", tableSkipped: "Skipped", tableSkippedHelp: "Using the default Quest mapping; capture wrist zero poses directly", recaptureLeft: "Recapture left wrist", recaptureRight: "Recapture right wrist", recaptureBoth: "Recapture both wrists", leftArm: "Left arm", rightArm: "Right arm", armTracking: "Tracking", armWaiting: "Waiting", simulationCommandFailed: "Simulation command failed",
     tactileEyebrow: "Tactile feedback", tactileTitle: "Tactile heatmap", tactileLead: "Inspect pressure across every tactile region; hover a cell for its exact value.", bothHands: "Both hands", tactileStatus: "Live data", sampleRate: "Sample rate", waitingTactile: "Waiting for first frame", tactileReady: "Data updated", tactileNoData: "Reading tactile data…", tactileError: "Read failed", row: "Row", column: "Column", sensorValue: "Value", rawValue: "Raw", processedValue: "Filtered",
     filterTitle: "Noise processing", filterLead: "Switch between basic per-cell filtering and force-assisted processing for each scenario", filterUncalibrated: "Baseline required", filterCalibrating: "Learning", filterCalibrated: "Enabled", filterIncomplete: "Some hands need learning", filterFailed: "Learning failed", filterStepPrepare: "Keep the hands free and still", filterStepLearn: "Learn a 3-second baseline", filterStepUse: "View filtered tactile data", filterDisplay: "Heatmap data", filterProcessed: "Filtered", filterRaw: "Raw", filterAlgorithm: "Processing mode", filterBasic: "Basic filter", filterEnhanced: "Force-assisted", filterSensitivity: "Sensitivity", filterSensitive: "Sensitive", filterBalanced: "Balanced (recommended)", filterStable: "Stable", filterBasicDrift: "Slow drift compensation", filterBasicDriftHelp: "Adjust each baseline only while no contact is detected", filterDrift: "Force-assisted recovery", filterDriftHelp: "Track slowly when idle; recover post-load offset after confirmed unloading", filterCalibrate: "Learn idle baseline", filterRecalibrate: "Relearn baseline", filterCancel: "Cancel learning", filterReadyHint: "Warm up and remove all contact first; relearn after each reconnect or low-level force calibration", filterKeepStill: "Do not touch · learning tactile and six-force baselines", filterComplete: "Idle baselines learned; both processing modes are available", filterCompleteNoForce: "Tactile baselines learned; basic filtering is available and force-assisted mode uses conservative recovery", filterNotEnoughSamples: "Not enough valid samples. Check tactile data and try again", filterSelectHand: "Select a hand and wait for tactile data first", filterBaselinePoints: "Learned cells", filterActivePoints: "Active contact", filterSuppressedPoints: "Suppressed now", filterModuleStates: "Module states", filterNoContactShort: "Idle", filterContactShort: "Contact", filterRecoveryShort: "Recovery", filterRawCaptureNote: "Processing affects only the heatmap. Captures keep raw tactile values and synchronized six-force data for review and offline calibration.", filterResetAfterForce: "Low-level force calibration completed. Relearn tactile and six-force idle baselines.",
     captureTitle: "Tactile data capture", captureLead: "Stream tactile frames from the selected hands to a file at a defined rate", captureFrequency: "Capture rate", captureFrequencyHint: "Cannot exceed the available tactile data rate", captureDuration: "Duration", captureDurationHint: "Up to 24 hours", captureOutput: "Output path", captureOutputHint: "Enter a directory or a file ending in .jsonl", captureFormat: "Output format", captureFormatHint: "One frame per line for streaming reads", captureStart: "Start capture", captureStop: "Stop capture", captureIdle: "Not started", captureRecording: "Recording", captureStopping: "Stopping", captureCompleted: "Complete", captureStopped: "Stopped", captureFailed: "Capture failed", captureWaiting: "Waiting to start", captureSamples: "frames", captureSavedTo: "Output file", captureSelectHand: "Select at least one hand to capture.", captureProgress: "Capture progress", captureDropped: "Dropped frames",
     joint: "Joint", position: "Actual / target", speed: "Speed", sixJoints: "6 joints", latestEvents: "Latest 4 runtime events", viewAllLogs: "View all", logsEyebrow: "Runtime records", logsLead: "Review the complete event history for the current control session.", logEntries: "entries", clearLogs: "Clear logs", currentSession: "Current session", realtimeUpdates: "Logs update in real time", liveUpdate: "Live", time: "Time", clear: "Clear", level: "Level", event: "Event", noEvents: "No runtime events",
-    cancel: "Cancel", confirm: "Confirm", waitingSetup: "Awaiting setup", connecting: "Connecting", disconnecting: "Disconnecting", live: "Connected", stopping: "Stopping", stopped: "Stopped", error: "Connection error", paused: "Tracking stopped", running: "Tracking", waitingData: "Waiting for hand data", ready: "Data ready", unavailable: "Unavailable", connected: "Connected", enabled: "Enabled", disabled: "Disabled",
+    cancel: "Cancel", confirm: "Confirm", waitingSetup: "Awaiting setup", connecting: "Connecting", disconnecting: "Disconnecting", live: "Connected", stopping: "Stopping", stopped: "Stopped", error: "Connection error", paused: "Sync stopped", running: "Syncing", waitingData: "Waiting for hand data", ready: "Data ready", unavailable: "Unavailable", connected: "Connected", enabled: "Enabled", disabled: "Disabled",
     fontSize: "Interface font size", fontSizeHelp: "Enter an exact size to scale console typography.", themeColor: "Theme color", themeColorHelp: "Choose a preset or use a custom color.", customColor: "Custom", resetAppearance: "Reset appearance", shutdownService: "Stop control service", disconnectBeforeShutdown: "Disconnect the devices before stopping the control service.",
-    setupFailed: "Could not submit configuration", enableOneHandError: "Enable at least one hand.", duplicateHostError: "Left and right hands cannot use the same host address.", safetyConfirmationError: "Confirm that the hand workspace is clear.", invalidSettingsError: "Check the highlighted device addresses or control settings.", actionFailed: "Action failed", runTitle: "Start hand tracking?", runCopy: "Confirm both hand workspaces are clear. Quest gestures will drive the dexterous hands in real time.", calibrateForceTitle: "Calibrate force sensors?", calibrateForceCopy: "Remove all loads and contact from the hands. Tracking will stop and every connected hand will be calibrated.", calibrationRequested: "Calibrating force sensors. Keep the hands unloaded.", calibrationRunningTitle: "Calibrating", calibrationRunningCopy: "Waiting for the minimum calibration time and stable readings from all six force channels. Do not touch the hands.", calibrationCompletedTitle: "Calibration complete", calibrationCompletedCopy: "Zero-force readings are stable on every connected hand. Confirm to close this window.", calibrationFailedTitle: "Calibration failed", calibrationFailedCopy: "Force readings did not stabilize or device communication failed.", acknowledge: "OK", disconnectTitle: "Disconnect current devices?", disconnectCopy: "Tracking, Modbus, and the Quest session will stop. You can then edit device settings and reconnect immediately.", quitTitle: "Stop the control service?", quitCopy: "All devices will disconnect and this page will stop responding. Restart the program to use it again.", jointNames: ["Little", "Ring", "Middle", "Index", "Thumb", "Rotate"], tactileRegions: { little_tip: "Little tip", little_nail: "Little nail", little_pad: "Little pad", ring_tip: "Ring tip", ring_nail: "Ring nail", ring_pad: "Ring pad", middle_tip: "Middle tip", middle_nail: "Middle nail", middle_pad: "Middle pad", index_tip: "Index tip", index_nail: "Index nail", index_pad: "Index pad", thumb_tip: "Thumb tip", thumb_nail: "Thumb nail", thumb_middle: "Thumb middle", thumb_pad: "Thumb pad", palm: "Palm" }, tactileGroups: { little: "Little", ring: "Ring", middle: "Middle", index: "Index", thumb: "Thumb", palm: "Palm" }
+    setupFailed: "Could not submit configuration", enableOneHandError: "Enable at least one hand.", duplicateHostError: "Left and right hands cannot use the same host address.", safetyConfirmationError: "Confirm that the hand workspace is clear.", invalidSettingsError: "Check the highlighted device addresses or control settings.", actionFailed: "Action failed", runTitle: "Start Quest sync?", runCopy: "Confirm the simulation zero poses and table frame are ready. Quest hands will drive both simulated arms in real time.", calibrateForceTitle: "Calibrate force sensors?", calibrateForceCopy: "Remove all loads and contact from the hands. Tracking will stop and every connected hand will be calibrated.", calibrationRequested: "Calibrating force sensors. Keep the hands unloaded.", calibrationRunningTitle: "Calibrating", calibrationRunningCopy: "Waiting for the minimum calibration time and stable readings from all six force channels. Do not touch the hands.", calibrationCompletedTitle: "Calibration complete", calibrationCompletedCopy: "Zero-force readings are stable on every connected hand. Confirm to close this window.", calibrationFailedTitle: "Calibration failed", calibrationFailedCopy: "Force readings did not stabilize or device communication failed.", acknowledge: "OK", disconnectTitle: "Disconnect current session?", disconnectCopy: "Sync, Quest, and the simulation session will stop. You can restart simulation directly afterward.", quitTitle: "Stop the control service?", quitCopy: "All devices will disconnect and this page will stop responding. Restart the program to use it again.", jointNames: ["Little", "Ring", "Middle", "Index", "Thumb", "Rotate"], tactileRegions: { little_tip: "Little tip", little_nail: "Little nail", little_pad: "Little pad", ring_tip: "Ring tip", ring_nail: "Ring nail", ring_pad: "Ring pad", middle_tip: "Middle tip", middle_nail: "Middle nail", middle_pad: "Middle pad", index_tip: "Index tip", index_nail: "Index nail", index_pad: "Index pad", thumb_tip: "Thumb tip", thumb_nail: "Thumb nail", thumb_middle: "Thumb middle", thumb_pad: "Thumb pad", palm: "Palm" }, tactileGroups: { little: "Little", ring: "Ring", middle: "Middle", index: "Index", thumb: "Thumb", palm: "Palm" }
   }
 };
 
@@ -45,7 +49,7 @@ let logFingerprint = "";
 let latestMessages = [];
 let latestSnapshot = null;
 let latestConfig = {};
-let activeNav = "setup";
+let activeNav = "simulation";
 let setupSubmitting = false;
 let setupErrors = [];
 let tactileSelection = [];
@@ -67,7 +71,9 @@ const setupPreferenceFields = [
   "right_enabled", "right_host", "right_device_id",
   "modbus_port", "modbus_timeout", "target_speed", "speed_mode",
   "frequency", "hand_frequency", "tactile_frequency",
-  "start", "open_on_exit", "hide_hand_markers"
+  "start", "open_on_exit", "hide_hand_markers",
+  "simulation_viewer", "simulation_gpu",
+  "simulation_zero_delay", "simulation_table_calibration"
 ];
 const defaultPreferences = { fontSize: 12, accent: "#a7f432" };
 const defaultCapturePreferences = { frequency: 10, duration: 10, output: "tactile_captures" };
@@ -169,7 +175,8 @@ function loadSetupPreferences() {
     return Object.fromEntries(setupPreferenceFields
       .filter(name => {
         if (!Object.hasOwn(saved, name)) return false;
-        const field = $('#setup-form').elements[name];
+        const field = $(`[name="${name}"]`);
+        if (!field) return false;
         return field.type === "checkbox"
           ? typeof saved[name] === "boolean"
           : ["string", "number"].includes(typeof saved[name]);
@@ -190,9 +197,8 @@ function loadLanguagePreference() {
 }
 
 function saveSetupPreferences() {
-  const form = $('#setup-form');
   const saved = Object.fromEntries(setupPreferenceFields.map(name => {
-    const field = form.elements[name];
+    const field = $(`[name="${name}"]`);
     return [name, field.type === "checkbox" ? field.checked : field.value];
   }));
   try { localStorage.setItem(setupPreferenceKey, JSON.stringify(saved)); }
@@ -224,7 +230,7 @@ function applyLanguage() {
   document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
   $$('[data-i18n]').forEach(element => { element.textContent = t(element.dataset.i18n); });
   $('#language-button').textContent = language === "zh" ? "EN" : "中";
-  $('#page-name').textContent = lastPhase === "setup" ? t("connection") : t(activeNav === "tactile" ? "tactile" : activeNav === "logs" ? "systemLog" : "dashboard");
+  $('#page-name').textContent = t(activeNav === "simulation" ? "simulationNav" : lastPhase === "setup" ? "connection" : activeNav === "tactile" ? "tactile" : activeNav === "logs" ? "systemLog" : "dashboard");
   updateShutdownAvailability();
   updateHandFields();
   if (latestSnapshot) {
@@ -268,16 +274,22 @@ function updateSpeedFields() {
   $('#fixed-speed-field').classList.toggle("inactive", !fixed);
 }
 
-function formPayload() {
-  const form = $('#setup-form');
-  const value = name => form.elements[name].value;
-  const checked = name => form.elements[name].checked;
+function formPayload(overrides = {}) {
+  const field = name => $(`[name="${name}"]`);
+  const value = name => field(name).value;
+  const checked = name => field(name).checked;
   return {
     left_enabled: checked("left_enabled"), left_host: value("left_host"), left_device_id: Number(value("left_device_id")),
     right_enabled: checked("right_enabled"), right_host: value("right_host"), right_device_id: Number(value("right_device_id")),
     modbus_port: Number(value("modbus_port")), modbus_timeout: Number(value("modbus_timeout")), target_speed: Number(value("target_speed")),
     speed_mode: value("speed_mode"), frequency: Number(value("frequency")), hand_frequency: Number(value("hand_frequency")), tactile_frequency: Number(value("tactile_frequency")),
-    start: checked("start"), open_on_exit: checked("open_on_exit"), hide_hand_markers: checked("hide_hand_markers"), safety_confirmed: checked("safety_confirmed")
+    start: checked("start"), open_on_exit: checked("open_on_exit"), hide_hand_markers: checked("hide_hand_markers"),
+    simulation_enabled: false, simulation_auto_start: false,
+    simulation_viewer: checked("simulation_viewer"),
+    simulation_gpu: value("simulation_gpu"), simulation_zero_delay: Number(value("simulation_zero_delay")),
+    simulation_table_calibration: checked("simulation_table_calibration"),
+    safety_confirmed: checked("safety_confirmed"),
+    ...overrides
   };
 }
 
@@ -359,34 +371,47 @@ function renderPhase(state) {
   $('#connection-dot').className = `status-dot ${state.phase === "live" ? "live" : state.phase === "error" ? "error" : ""}`;
   const hasSession = state.phase !== "setup";
   updateShutdownAvailability(hasSession);
-  if (!hasSession) activeNav = "setup";
-  else if (phaseChanged || activeNav === "setup") activeNav = "dashboard";
+  if (!hasSession) {
+    if (activeNav !== "simulation") activeNav = "setup";
+  } else if (activeNav === "setup") {
+    activeNav = "dashboard";
+  }
   if (state.phase !== "live" && activeNav === "tactile") activeNav = "dashboard";
   const showTactile = state.phase === "live" && activeNav === "tactile";
+  const showSimulation = activeNav === "simulation";
   const showLogs = hasSession && activeNav === "logs";
-  $('#setup-view').hidden = hasSession;
-  $('#dashboard-view').hidden = !hasSession || showTactile || showLogs;
+  $('#setup-view').hidden = hasSession || showSimulation;
+  $('#dashboard-view').hidden = !hasSession || showTactile || showSimulation || showLogs;
+  $('#simulation-view').hidden = !showSimulation;
+  $('#simulation-session-setup').hidden = state.phase === "live";
+  $('#simulation-runtime').hidden = state.phase !== "live";
+  $('#simulation-live-actions').hidden = state.phase !== "live";
   $('#tactile-view').hidden = !showTactile;
   $('#logs-view').hidden = !showLogs;
   $('#top-session').hidden = !hasSession;
-  $('#page-name').textContent = !hasSession ? t("connection") : t(showTactile ? "tactile" : showLogs ? "systemLog" : "dashboard");
+  $('#page-name').textContent = showSimulation ? t("simulationNav") : !hasSession ? t("connection") : t(showTactile ? "tactile" : showLogs ? "systemLog" : "dashboard");
   const setupNav = $('[data-nav="setup"]');
   const dashboardNav = $('[data-nav="dashboard"]');
+  const simulationNav = $('[data-nav="simulation"]');
   const tactileNav = $('[data-nav="tactile"]');
   const logsNav = $('[data-nav="logs"]');
   setupNav.disabled = hasSession;
   dashboardNav.disabled = !hasSession;
+  simulationNav.disabled = false;
   tactileNav.disabled = state.phase !== "live";
   logsNav.disabled = !hasSession;
   $$('.nav-item').forEach(item => item.classList.toggle("active", item.dataset.nav === activeNav));
   if (state.phase === "error" && state.detail && (phaseChanged || state.detail !== lastDetail)) addLocalLog("error", state.detail);
   const connectButton = $('.primary-button', $('#setup-form'));
+  const simulationSessionButton = $('#simulation-session-button');
+  simulationSessionButton.disabled = state.phase !== "setup";
   if (state.phase === "setup" && !setupSubmitting && (
     phaseChanged || state.detail !== lastDetail || connectButton.disabled
   )) {
     setForm(state.config);
     $('[name="safety_confirmed"]').checked = false;
     connectButton.disabled = false;
+    $('#simulation-setup-error').textContent = state.detail || "";
     if (state.detail) renderSetupErrors([state.detail]);
     else clearSetupErrors();
   }
@@ -439,6 +464,99 @@ function renderSnapshot(snapshot) {
   $('span:first-child', trackingButton).className = trackingEnabled ? "stop-icon" : "play-icon";
   renderHand("left", snapshot.left_enabled, snapshot.left_state, snapshot.left_target, snapshot.left_speed);
   renderHand("right", snapshot.right_enabled, snapshot.right_state, snapshot.right_target, snapshot.right_speed);
+  const hasRealHand = Boolean(snapshot.left_enabled || snapshot.right_enabled);
+  ["#speed-button", "#motion-filter-button", "#force-calibration-button"].forEach(selector => {
+    $(selector).disabled = !hasRealHand;
+  });
+  renderSimulation(snapshot.modules?.yam_simulation?.telemetry || {});
+}
+
+function armStatusLabel(arm = {}) {
+  const reason = arm.hold_reason || "";
+  if (!reason) return t("armTracking");
+  if (reason === "zero_pose_countdown") {
+    return `${Number(arm.zero_capture_remaining_s || 0).toFixed(1)} s`;
+  }
+  const labels = {
+    table_calibration_required: t("tablePending"),
+    tracking_lost: t("armWaiting"),
+    waiting_for_tracking: t("armWaiting"),
+    clutch_captured: t("ready"),
+    clutch_requested: t("armWaiting"),
+    disabled: t("paused")
+  };
+  return labels[reason] || reason.replaceAll("_", " ");
+}
+
+function renderSimulation(simulation = {}) {
+  const active = Boolean(simulation.active);
+  const lifecycle = simulation.lifecycle || "stopped";
+  const stateKeys = {
+    starting: "simulationStarting",
+    running: "simulationRunning",
+    stopping: "simulationStopping",
+    error: "simulationError",
+    stopped: "simulationStopped",
+    closed: "simulationStopped",
+    not_started: "simulationStopped"
+  };
+  const state = $('#simulation-state');
+  state.dataset.state = lifecycle;
+  $('span:last-child', state).textContent = t(stateKeys[lifecycle] || "simulationStopped");
+  $('#simulation-detail').textContent = simulation.last_error || (active
+    ? `${simulation.viewer_enabled ? "MuJoCo viewer · " : ""}${simulation.gpu || "--"}`
+    : t("simulationStoppedDetail"));
+
+  const toggle = $('#simulation-toggle-button');
+  toggle.dataset.command = active ? "stop" : "start";
+  toggle.className = active ? "danger-button" : "run-button";
+  $('span:first-child', toggle).className = active ? "stop-icon" : "play-icon";
+  $('span:last-child', toggle).textContent = t(active ? "stopSimulation" : "startSimulation");
+  toggle.disabled = ["starting", "stopping"].includes(lifecycle);
+
+  const table = simulation.table_calibration || {};
+  const tableEnabled = simulation.table_calibration_enabled !== false;
+  const calibrated = Boolean(table.calibrated);
+  const count = Number(table.captured_count || 0);
+  $('#table-calibration-state').textContent = !active
+    ? "--"
+    : !tableEnabled
+      ? t("tableSkipped")
+    : calibrated
+      ? t("tableComplete")
+      : `${count}/3 · ${t("tablePending")}`;
+  $('#simulation-table-summary').textContent = !tableEnabled
+    ? t("tableSkipped")
+    : calibrated
+      ? t("tableComplete")
+      : `${count}/3`;
+  $('#table-calibration-instruction').textContent = !active
+    ? t("simulationStoppedDetail")
+    : !tableEnabled
+      ? t("tableSkippedHelp")
+    : table.last_error || table.instruction || t("tablePending");
+  $('#table-calibration-progress').style.width = tableEnabled
+    ? `${Math.max(0, Math.min(100, count / 3 * 100))}%`
+    : "0%";
+  $('#left-arm-state').textContent = active ? armStatusLabel(simulation.arms?.left) : "--";
+  $('#right-arm-state').textContent = active ? armStatusLabel(simulation.arms?.right) : "--";
+  $('#simulation-gpu-state').textContent = active
+    ? String(simulation.gpu || "--").toUpperCase()
+    : "--";
+  const delayInput = $('#simulation-zero-delay');
+  if (
+    document.activeElement !== delayInput
+    && Number.isFinite(Number(simulation.zero_capture_delay_s))
+  ) {
+    delayInput.value = Number(simulation.zero_capture_delay_s);
+  }
+  const tableToggle = $('#simulation-table-calibration-enabled');
+  if (document.activeElement !== tableToggle) tableToggle.checked = tableEnabled;
+  tableToggle.disabled = ["starting", "stopping"].includes(lifecycle);
+  $('#table-calibration-button').disabled = !active || !tableEnabled;
+  $$('[data-capture-side]').forEach(button => {
+    button.disabled = !active || (tableEnabled && !calibrated);
+  });
 }
 
 function tactileFrameCopy(regions = {}) {
@@ -1278,6 +1396,14 @@ async function sendAction(action) {
   catch (error) { addLocalLog("error", `${t("actionFailed")}: ${error.message}`); }
 }
 
+async function sendSimulationCommand(command, options = {}) {
+  try {
+    await post("/api/simulation", { command, ...options });
+  } catch (error) {
+    addLocalLog("error", `${t("simulationCommandFailed")}: ${error.message}`);
+  }
+}
+
 function confirmAction(kind) {
   const dialog = $('#confirm-dialog');
   if (kind === "calibrate_force") {
@@ -1320,6 +1446,10 @@ $('#setup-form').addEventListener("input", () => {
   saveSetupPreferences();
   if (setupErrors.length) clearSetupErrors();
 });
+$('#simulation-setup-fields').addEventListener("input", () => {
+  saveSetupPreferences();
+  $('#simulation-setup-error').textContent = "";
+});
 
 $$('[name="left_enabled"], [name="right_enabled"]').forEach(input => input.addEventListener("change", updateHandFields));
 $('[name="speed_mode"]').addEventListener("change", updateSpeedFields);
@@ -1339,6 +1469,53 @@ $('#tracking-button').addEventListener("click", event => {
 $('#speed-button').addEventListener("click", () => sendAction("speed_mode"));
 $('#motion-filter-button').addEventListener("click", () => sendAction("motion_filter"));
 $('#force-calibration-button').addEventListener("click", () => confirmAction("calibrate_force"));
+$('#simulation-session-button').addEventListener("click", async event => {
+  const fields = $$('input, select', $('#simulation-setup-fields'));
+  if (fields.some(field => !field.validity.valid)) {
+    $('#simulation-setup-error').textContent = t("invalidSettingsError");
+    return;
+  }
+  const button = event.currentTarget;
+  button.disabled = true;
+  setupSubmitting = true;
+  $('#simulation-setup-error').textContent = "";
+  try {
+    await post("/api/setup", formPayload({
+      left_enabled: false,
+      right_enabled: false,
+      simulation_enabled: true,
+      simulation_auto_start: false,
+      start: false,
+      open_on_exit: false,
+      safety_confirmed: true
+    }));
+  } catch (error) {
+    $('#simulation-setup-error').textContent = error.message;
+    button.disabled = false;
+  } finally {
+    setupSubmitting = false;
+  }
+});
+$('#simulation-toggle-button').addEventListener("click", event => {
+  const command = event.currentTarget.dataset.command || "start";
+  sendSimulationCommand(command, {
+    delay_seconds: Number($('#simulation-zero-delay').value)
+  });
+});
+$('#table-calibration-button').addEventListener("click", () => {
+  sendSimulationCommand("calibrate_table");
+});
+$('#simulation-table-calibration-enabled').addEventListener("change", event => {
+  sendSimulationCommand("set_table_calibration", {
+    enabled: event.currentTarget.checked
+  });
+});
+$$('[data-capture-side]').forEach(button => button.addEventListener("click", event => {
+  sendSimulationCommand("capture_pose", {
+    side: event.currentTarget.dataset.captureSide,
+    delay_seconds: Number($('#simulation-zero-delay').value)
+  });
+}));
 $('#dialog-confirm').addEventListener("click", event => {
   if ($('#confirm-dialog').dataset.flow !== "calibration") return;
   event.preventDefault();
@@ -1362,6 +1539,7 @@ $('#confirm-dialog').addEventListener("close", event => {
   }
 });
 $('#disconnect-button').addEventListener("click", () => confirmAction("disconnect"));
+$('#simulation-disconnect-button').addEventListener("click", () => confirmAction("disconnect"));
 $('#clear-log').addEventListener("click", () => {
   hiddenLogCount += latestMessages.slice(hiddenLogCount).length;
   logFingerprint = "";
@@ -1380,6 +1558,7 @@ $$('.nav-item').forEach(button => button.addEventListener("click", () => {
   activeNav = button.dataset.nav;
   if (activeNav === "tactile") {
     $('#dashboard-view').hidden = true;
+    $('#simulation-view').hidden = true;
     $('#logs-view').hidden = true;
     $('#tactile-view').hidden = false;
     $('#page-name').textContent = t("tactile");
@@ -1388,14 +1567,16 @@ $$('.nav-item').forEach(button => button.addEventListener("click", () => {
     const initialSelection = enabledSides.length === 1 ? enabledSides : (tactileSelection.length ? tactileSelection : enabledSides);
     setTactileSelection(initialSelection);
   } else {
+    $('#setup-view').hidden = activeNav !== "setup" || lastPhase !== "setup";
     $('#tactile-view').hidden = true;
+    $('#simulation-view').hidden = activeNav !== "simulation";
     $('#logs-view').hidden = activeNav !== "logs";
-    $('#dashboard-view').hidden = lastPhase === "setup" || activeNav === "logs";
-    $('#page-name').textContent = t(activeNav === "setup" ? "connection" : activeNav === "logs" ? "systemLog" : "dashboard");
+    $('#dashboard-view').hidden = lastPhase === "setup" || ["simulation", "logs"].includes(activeNav);
+    $('#page-name').textContent = t(activeNav === "setup" ? "connection" : activeNav === "simulation" ? "simulationNav" : activeNav === "logs" ? "systemLog" : "dashboard");
     if (previousNav === "tactile") stopTactileSampling();
     if (activeNav === "logs") {
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } else if (activeNav === "dashboard") {
+    } else if (["dashboard", "simulation"].includes(activeNav)) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }

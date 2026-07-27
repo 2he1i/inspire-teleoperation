@@ -169,6 +169,72 @@ class QuestSource:
         value = getattr(sample, attribute, None)
         return None if value is None else RigidTransform(value)
 
+    def _wrist_transform(self, sample: Any, side: str) -> tuple[RigidTransform | None, str]:
+        """Prefer TeleVuer's raw OpenXR wrist over its Unitree arm output.
+
+        TeleVuer 4.0 wraps ``left/right_arm_pose`` with Unitree-specific axis,
+        head and waist offsets before exposing ``*_wrist_pose``.  Those offsets
+        are inappropriate for YAM relative-pose control.  The underlying
+        TeleVuer instance retains the original OpenXR transform.
+        """
+
+        raw_source = getattr(self._wrapper, "tvuer", None)
+        raw_value = getattr(raw_source, f"{side}_arm_pose", None)
+        if raw_value is not None:
+            try:
+                return RigidTransform(raw_value), "openxr_raw"
+            except (TypeError, ValueError):
+                pass
+        return self._transform(sample, f"{side}_wrist_pose"), "wrapper_processed"
+
+    def _raw_hand_landmarks(self, side: str) -> np.ndarray | None:
+        """Read immutable OpenXR world-space landmarks when TeleVuer exposes them."""
+
+        raw_source = getattr(self._wrapper, "tvuer", None)
+        value = getattr(raw_source, f"{side}_hand_positions", None)
+        if value is None:
+            return None
+        try:
+            landmarks = np.asarray(value, dtype=np.float64)
+        except (TypeError, ValueError):
+            return None
+        if (
+            landmarks.shape != (25, 3)
+            or not np.isfinite(landmarks).all()
+            or not np.any(np.abs(landmarks) > 1e-9)
+        ):
+            return None
+        landmarks = landmarks.copy()
+        landmarks.setflags(write=False)
+        return landmarks
+
+    def _hand_gestures(self, sample: Any) -> dict[str, dict[str, bool | float]]:
+        """Expose the existing TeleVuer pinch/squeeze signals per hand."""
+
+        raw_source = getattr(self._wrapper, "tvuer", None)
+        gestures: dict[str, dict[str, bool | float]] = {}
+        for side in ("left", "right"):
+            values: dict[str, bool | float] = {}
+            for output_name, attribute, converter, default in (
+                ("pinch", f"{side}_hand_pinch", bool, False),
+                ("pinch_value", f"{side}_hand_pinchValue", float, 0.0),
+                ("squeeze", f"{side}_hand_squeeze", bool, False),
+                ("squeeze_value", f"{side}_hand_squeezeValue", float, 0.0),
+            ):
+                value = (
+                    getattr(raw_source, attribute, None)
+                    if raw_source is not None
+                    else None
+                )
+                if value is None:
+                    value = getattr(sample, attribute, default)
+                try:
+                    values[output_name] = converter(value)
+                except (TypeError, ValueError):
+                    values[output_name] = default
+            gestures[side] = values
+        return gestures
+
     @staticmethod
     def _motion_ready(sample: Any) -> bool:
         """Support TeleData releases with and without an explicit ready flag."""
@@ -201,15 +267,21 @@ class QuestSource:
         ready = self._motion_ready(sample)
 
         left = right = None
+        wrist_conventions: dict[str, str] = {}
+        raw_landmarks: dict[str, np.ndarray] = {}
         if ready:
             left_landmarks = getattr(sample, "left_hand_pos", None)
             right_landmarks = getattr(sample, "right_hand_pos", None)
-            left_wrist = self._transform(sample, "left_wrist_pose")
-            right_wrist = self._transform(sample, "right_wrist_pose")
+            left_wrist, wrist_conventions["left"] = self._wrist_transform(sample, "left")
+            right_wrist, wrist_conventions["right"] = self._wrist_transform(sample, "right")
             if left_landmarks is not None:
                 left = HandTracking(left_landmarks, wrist=left_wrist)
             if right_landmarks is not None:
                 right = HandTracking(right_landmarks, wrist=right_wrist)
+            for side in ("left", "right"):
+                raw = self._raw_hand_landmarks(side)
+                if raw is not None:
+                    raw_landmarks[side] = raw
 
         return TeleopFrame(
             sequence=self._sequence,
@@ -218,6 +290,11 @@ class QuestSource:
             left_hand=left,
             right_hand=right,
             head=self._transform(sample, "head_pose") if ready else None,
+            extras={
+                "wrist_pose_convention": wrist_conventions,
+                "raw_openxr_hand_landmarks": raw_landmarks,
+                "hand_gestures": self._hand_gestures(sample),
+            },
         )
 
     def close(self) -> None:

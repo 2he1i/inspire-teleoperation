@@ -1,0 +1,216 @@
+<mujoco model="yam_pro">
+  <!--
+    Six-axis simulation asset derived from i2rt's ArmType.YAM_PRO model.
+    The temporary fixed adapter is intentionally massless in stage one; replace
+    it with measured Inspire mounting geometry before any hardware integration.
+  -->
+  <compiler angle="radian" meshdir="meshes"/>
+
+  <option gravity="0 0 -9.81"/>
+
+  <visual>
+    <headlight ambient="0.45 0.45 0.45" diffuse="0.75 0.75 0.75"
+               specular="0.15 0.15 0.15"/>
+    <rgba haze="0.9 0.93 0.96 1"/>
+    <global offwidth="1600" offheight="1000"/>
+  </visual>
+
+  <statistic center="0.32 0 0.30" extent="1.05"/>
+
+  <default>
+    <default class="hand_joint_left">
+      <site type="sphere" size="0.007" rgba="0.12 0.55 1 0.48"/>
+    </default>
+    <default class="hand_bone_left">
+      <geom type="capsule" size="0.004 0.01" contype="0" conaffinity="0"
+            rgba="0.12 0.55 1 0.28"/>
+    </default>
+    <default class="hand_joint_right">
+      <site type="sphere" size="0.007" rgba="1 0.35 0.08 0.48"/>
+    </default>
+    <default class="hand_bone_right">
+      <geom type="capsule" size="0.004 0.01" contype="0" conaffinity="0"
+            rgba="1 0.35 0.08 0.28"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture name="skybox" type="skybox" builtin="gradient"
+             rgb1="0.58 0.68 0.80" rgb2="0.08 0.10 0.14"
+             width="512" height="3072"/>
+    <mesh name="base"  file="base.stl"/>
+    <mesh name="link1" file="link1.stl"/>
+    <mesh name="link2" file="link2.stl"/>
+    <mesh name="link3" file="link3.stl"/>
+    <mesh name="link4" file="link4.stl"/>
+    <mesh name="link5" file="link5.stl"/>
+  </asset>
+
+  <worldbody>
+    <light name="table_key_light" directional="true"
+           pos="0.2 -0.4 1.8" dir="0.1 0.2 -1"
+           diffuse="0.85 0.85 0.85"/>
+    <geom name="floor" type="plane" size="2.5 2.5 0.1"
+          pos="0 0 -0.76" rgba="0.15 0.17 0.20 1"/>
+    <!-- The base is fixed at the near-left edge of this white work table. -->
+    <geom name="white_table_top" type="box" size="0.55 0.48 0.035"
+          pos="0.50 0 -0.035" rgba="0.96 0.96 0.96 1"/>
+    <geom name="white_table_leg_left" type="box" size="0.035 0.38 0.36"
+          pos="0.12 0 -0.395" rgba="0.88 0.88 0.88 1"/>
+    <geom name="white_table_leg_right" type="box" size="0.035 0.38 0.36"
+          pos="0.88 0 -0.395" rgba="0.88 0.88 0.88 1"/>
+    <body name="table_focus" pos="0.40 0 0.30"/>
+    <camera name="fixed_table_view" mode="targetbody" target="table_focus"
+            pos="1.15 -1.15 0.90" fovy="40"/>
+
+    <body name="base" pos="0 0 0" quat="1 0 0 0">
+      <inertial pos="-3.83908409137e-05 2.40068981265e-05 0.0247677998591" quat="0.49938114478697948 0.50073961447194104 -0.50008727960892496 -0.4997909798136444" mass="0.873654" diaginertia="0.00067830593494507517 0.0015705906697095881 0.0016940403953453372"/>
+      <geom pos="0.0374957881421 0.0464005994986 0.187501137731" quat="9.381838724410722e-07 0.70710807985877822 9.3818731858953273e-07 -0.70710548251068706" type="mesh" rgba="0.647059 0.647059 0.647059 1" mesh="base"/>
+      <body name="link1" pos="-2.49777947114e-07 0 0.0679999999995" quat="9.3818411501280666e-07 0.70710807985877822 9.381875611610837e-07 -0.70710548251068706">
+        <inertial pos="-0.0233636 -0.00172503 -0.00727828" quat="-0.64524361769733818 -0.21204348917963081 0.19681281961670494 0.70708057995669871" mass="0.101218" diaginertia="4.7181498384517786e-05 0.00010625072855078136 0.0001349130730647009"/>
+        <joint name="joint1" pos="0 0 0" axis="-1 0 0" type="hinge" range="-2.61799 3.14159" actuatorfrcrange="-10 10"/>
+        <geom pos="-0.119501 -0.0464 -0.0374968" quat="1 0 0 0" type="mesh" rgba="0.647059 0.647059 0.647059 1" mesh="link1"/>
+        <body name="link2" pos="-0.0455 -0.0329 -0.02" quat="1 1.6811750000000164e-16 -9.5581999999999982e-16 1.7303650000000003e-15">
+          <inertial pos="0.000134495 0.0336247 0.129165" quat="-2.3368104685381288e-05 0.70711781939337348 -0.00013679904709816199 0.70709572918828534" mass="1.52608" diaginertia="0.0008311292504908298 0.015165400733604792 0.01523770001590438"/>
+          <joint name="joint2" pos="0 0 0" axis="-3.58252e-15 -1 3.35753e-16" type="hinge" range="0 3.66519" actuatorfrcrange="-10 10"/>
+          <geom pos="-0.0740001 -0.0135 -0.0174977" quat="1 0 0 0" type="mesh" rgba="0.647059 0.647059 0.647059 1" mesh="link2"/>
+          <body name="link3" pos="4.08431e-07 -0.00205 0.264" quat="1 -5.3991000000000092e-15 2.8574349999999998e-14 3.2007050000015427e-16">
+            <inertial pos="-0.0556042 0.0357986 -0.135083" quat="0.6673095083601458 -0.084819836562637627 0.73417432797379689 0.092150265989044328" mass="0.982553" diaginertia="0.00087644191886574482 0.0076296046064632606 0.0076519794746709975"/>
+            <joint name="joint3" pos="0 0 0" axis="4.54273e-15 1 1.04275e-14" type="hinge" range="0 3.14159" actuatorfrcrange="-10 10"/>
+            <geom pos="-0.0740003 -0.01145 -0.281499" quat="1 0 0 0" type="mesh" rgba="0.647059 0.647059 0.647059 1" mesh="link3"/>
+            <body name="link4" pos="-0.0600003 0.0688 -0.244999" quat="1 5.2137499999999605e-15 -1.8263150000000013e-14 -2.1700149999999048e-15">
+              <inertial pos="-0.0548959 -0.0350242 -0.0575534" quat="0.10060722133102601 0.94108569945662934 -0.07975559657973047 0.31284970530350159" mass="0.462165" diaginertia="0.00028778996544839548 0.00076643008992378317 0.00078788794462782174"/>
+              <joint name="joint4" pos="0 0 0" axis="0 1 0" type="hinge" range="-1.69297 1.5708" actuatorfrcrange="-10 10"/>
+              <geom pos="-0.0138003 -0.0802502 -0.0364989" quat="1 0 0 0" type="mesh" rgba="0.647059 0.647059 0.647059 1" mesh="link4"/>
+              <body name="link5" pos="-0.0403003 -0.0338507 -0.0739989" quat="1 -4.1908100000000015e-15 -1.1163449999999929e-15 -1.6792100000000047e-15">
+                <inertial pos="0.0375847 -3.55003e-05 -0.000825911" quat="0.64668614070190822 0.64239183561513957 0.28865586152813083 -0.29292927229031912" mass="0.403307" diaginertia="0.00016964735642963316 0.00019568620481229821 0.00021979443875806869"/>
+                <joint name="joint5" pos="0 0 0" axis="1 0 0" type="hinge" range="-1.5708 1.5708" actuatorfrcrange="-10 10"/>
+                <geom pos="0.0265 -0.0463995 0.0375" quat="1 0 0 0" type="mesh" rgba="0.827451 0.623529 0.784314 1" mesh="link5"/>
+                <body name="link6" pos="0.0404996 2.39858e-07 -0.0356" quat="1 3.3970050000000036e-15 -8.7934999999998608e-16 4.0981150000000029e-15">
+                  <inertial pos="0 0 0" mass="1e-6" diaginertia="1e-9 1e-9 1e-9"/>
+                  <joint name="joint6" pos="0 0 0" axis="1.46014e-15 2.40808e-14 -1" type="hinge" range="-2.0944 2.0944" actuatorfrcrange="-10 10"/>
+                  <body name="inspire_adapter" pos="0 0 -0.12">
+                    <geom name="inspire_adapter_visual" type="cylinder"
+                          pos="0 0 0.06" size="0.035 0.06"
+                          contype="0" conaffinity="0"
+                          rgba="0.18 0.22 0.28 0.65"/>
+                    <site name="inspire_tcp" pos="0 0 0" size="0.012"
+                          rgba="0.1 0.9 0.2 1"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="quest_target_body" mocap="true">
+      <site name="quest_target" type="sphere" size="0.014"
+            rgba="1 0.35 0.05 0.7"/>
+    </body>
+
+    <body name="left_hand_visual" mocap="true" pos="0 0 -10">
+      <site name="left_hand_joint_00" class="hand_joint_left"/>
+      <site name="left_hand_joint_01" class="hand_joint_left"/>
+      <site name="left_hand_joint_02" class="hand_joint_left"/>
+      <site name="left_hand_joint_03" class="hand_joint_left"/>
+      <site name="left_hand_joint_04" class="hand_joint_left"/>
+      <site name="left_hand_joint_05" class="hand_joint_left"/>
+      <site name="left_hand_joint_06" class="hand_joint_left"/>
+      <site name="left_hand_joint_07" class="hand_joint_left"/>
+      <site name="left_hand_joint_08" class="hand_joint_left"/>
+      <site name="left_hand_joint_09" class="hand_joint_left"/>
+      <site name="left_hand_joint_10" class="hand_joint_left"/>
+      <site name="left_hand_joint_11" class="hand_joint_left"/>
+      <site name="left_hand_joint_12" class="hand_joint_left"/>
+      <site name="left_hand_joint_13" class="hand_joint_left"/>
+      <site name="left_hand_joint_14" class="hand_joint_left"/>
+      <site name="left_hand_joint_15" class="hand_joint_left"/>
+      <site name="left_hand_joint_16" class="hand_joint_left"/>
+      <site name="left_hand_joint_17" class="hand_joint_left"/>
+      <site name="left_hand_joint_18" class="hand_joint_left"/>
+      <site name="left_hand_joint_19" class="hand_joint_left"/>
+      <site name="left_hand_joint_20" class="hand_joint_left"/>
+      <site name="left_hand_joint_21" class="hand_joint_left"/>
+      <site name="left_hand_joint_22" class="hand_joint_left"/>
+      <site name="left_hand_joint_23" class="hand_joint_left"/>
+      <site name="left_hand_joint_24" class="hand_joint_left"/>
+      <geom name="left_hand_bone_00" class="hand_bone_left"/>
+      <geom name="left_hand_bone_01" class="hand_bone_left"/>
+      <geom name="left_hand_bone_02" class="hand_bone_left"/>
+      <geom name="left_hand_bone_03" class="hand_bone_left"/>
+      <geom name="left_hand_bone_04" class="hand_bone_left"/>
+      <geom name="left_hand_bone_05" class="hand_bone_left"/>
+      <geom name="left_hand_bone_06" class="hand_bone_left"/>
+      <geom name="left_hand_bone_07" class="hand_bone_left"/>
+      <geom name="left_hand_bone_08" class="hand_bone_left"/>
+      <geom name="left_hand_bone_09" class="hand_bone_left"/>
+      <geom name="left_hand_bone_10" class="hand_bone_left"/>
+      <geom name="left_hand_bone_11" class="hand_bone_left"/>
+      <geom name="left_hand_bone_12" class="hand_bone_left"/>
+      <geom name="left_hand_bone_13" class="hand_bone_left"/>
+      <geom name="left_hand_bone_14" class="hand_bone_left"/>
+      <geom name="left_hand_bone_15" class="hand_bone_left"/>
+      <geom name="left_hand_bone_16" class="hand_bone_left"/>
+      <geom name="left_hand_bone_17" class="hand_bone_left"/>
+      <geom name="left_hand_bone_18" class="hand_bone_left"/>
+      <geom name="left_hand_bone_19" class="hand_bone_left"/>
+      <geom name="left_hand_bone_20" class="hand_bone_left"/>
+      <geom name="left_hand_bone_21" class="hand_bone_left"/>
+      <geom name="left_hand_bone_22" class="hand_bone_left"/>
+      <geom name="left_hand_bone_23" class="hand_bone_left"/>
+    </body>
+
+    <body name="right_hand_visual" mocap="true" pos="0 0 -10">
+      <site name="right_hand_joint_00" class="hand_joint_right"/>
+      <site name="right_hand_joint_01" class="hand_joint_right"/>
+      <site name="right_hand_joint_02" class="hand_joint_right"/>
+      <site name="right_hand_joint_03" class="hand_joint_right"/>
+      <site name="right_hand_joint_04" class="hand_joint_right"/>
+      <site name="right_hand_joint_05" class="hand_joint_right"/>
+      <site name="right_hand_joint_06" class="hand_joint_right"/>
+      <site name="right_hand_joint_07" class="hand_joint_right"/>
+      <site name="right_hand_joint_08" class="hand_joint_right"/>
+      <site name="right_hand_joint_09" class="hand_joint_right"/>
+      <site name="right_hand_joint_10" class="hand_joint_right"/>
+      <site name="right_hand_joint_11" class="hand_joint_right"/>
+      <site name="right_hand_joint_12" class="hand_joint_right"/>
+      <site name="right_hand_joint_13" class="hand_joint_right"/>
+      <site name="right_hand_joint_14" class="hand_joint_right"/>
+      <site name="right_hand_joint_15" class="hand_joint_right"/>
+      <site name="right_hand_joint_16" class="hand_joint_right"/>
+      <site name="right_hand_joint_17" class="hand_joint_right"/>
+      <site name="right_hand_joint_18" class="hand_joint_right"/>
+      <site name="right_hand_joint_19" class="hand_joint_right"/>
+      <site name="right_hand_joint_20" class="hand_joint_right"/>
+      <site name="right_hand_joint_21" class="hand_joint_right"/>
+      <site name="right_hand_joint_22" class="hand_joint_right"/>
+      <site name="right_hand_joint_23" class="hand_joint_right"/>
+      <site name="right_hand_joint_24" class="hand_joint_right"/>
+      <geom name="right_hand_bone_00" class="hand_bone_right"/>
+      <geom name="right_hand_bone_01" class="hand_bone_right"/>
+      <geom name="right_hand_bone_02" class="hand_bone_right"/>
+      <geom name="right_hand_bone_03" class="hand_bone_right"/>
+      <geom name="right_hand_bone_04" class="hand_bone_right"/>
+      <geom name="right_hand_bone_05" class="hand_bone_right"/>
+      <geom name="right_hand_bone_06" class="hand_bone_right"/>
+      <geom name="right_hand_bone_07" class="hand_bone_right"/>
+      <geom name="right_hand_bone_08" class="hand_bone_right"/>
+      <geom name="right_hand_bone_09" class="hand_bone_right"/>
+      <geom name="right_hand_bone_10" class="hand_bone_right"/>
+      <geom name="right_hand_bone_11" class="hand_bone_right"/>
+      <geom name="right_hand_bone_12" class="hand_bone_right"/>
+      <geom name="right_hand_bone_13" class="hand_bone_right"/>
+      <geom name="right_hand_bone_14" class="hand_bone_right"/>
+      <geom name="right_hand_bone_15" class="hand_bone_right"/>
+      <geom name="right_hand_bone_16" class="hand_bone_right"/>
+      <geom name="right_hand_bone_17" class="hand_bone_right"/>
+      <geom name="right_hand_bone_18" class="hand_bone_right"/>
+      <geom name="right_hand_bone_19" class="hand_bone_right"/>
+      <geom name="right_hand_bone_20" class="hand_bone_right"/>
+      <geom name="right_hand_bone_21" class="hand_bone_right"/>
+      <geom name="right_hand_bone_22" class="hand_bone_right"/>
+      <geom name="right_hand_bone_23" class="hand_bone_right"/>
+    </body>
+  </worldbody>
+</mujoco>

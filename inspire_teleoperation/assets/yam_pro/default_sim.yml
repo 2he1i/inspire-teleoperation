@@ -1,0 +1,27 @@
+# Stage-one defaults. The adapter/TCP dimensions and Quest axis map are
+# provisional and must be calibrated visually before hardware work.
+hand: right
+# Compact folded pose with joint 2/3 clear of their lower limits for local IK.
+initial_q: [0.0, 0.2, 0.3, 0.0, 0.0, 0.0]
+# Hold after first detecting each hand, then capture its current wrist as zero.
+zero_capture_delay: 3.0
+# Keep the last safe target and hand visual across brief wireless tracking gaps.
+tracking_loss_grace: 0.5
+translation_scale: [0.8, 0.8, 0.8]
+axis_rotation:
+  # Legacy no-table-calibration mode only: OpenXR x/y/z -> YAM TCP axes.
+  # Three-point table mode instead maps calibrated forward/left/up directly
+  # to the YAM base +X/+Y/+Z axes.
+  - [-0.000000527, -0.980065848, -0.198672931]
+  - [1.0, 0.0, -0.000002654]
+  - [0.000002601, -0.198672931, 0.980065848]
+wrist_to_tcp:
+  - [1.0, 0.0, 0.0, 0.0]
+  - [0.0, 1.0, 0.0, 0.0]
+  - [0.0, 0.0, 1.0, 0.0]
+  - [0.0, 0.0, 0.0, 1.0]
+workspace_min: [-0.75, -0.75, -0.20]
+workspace_max: [0.75, 0.75, 0.95]
+max_joint_step: 0.045
+low_pass_alpha: 0.35
+ik_max_iters: 35

@@ -131,9 +131,39 @@ def parse_args(argv=None):
         default="auto",
         help="Web console language: auto, zh, or en (default: auto).",
     )
+    parser.add_argument(
+        "--simulation",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable and auto-start the dual YAM MuJoCo simulation (default: enabled).",
+    )
+    parser.add_argument(
+        "--simulation-viewer",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Open the MuJoCo simulation viewer (default: enabled).",
+    )
+    parser.add_argument(
+        "--simulation-gpu",
+        choices=("nvidia", "system"),
+        default="nvidia",
+        help="Simulation OpenGL GPU selection (default: nvidia).",
+    )
+    parser.add_argument(
+        "--simulation-zero-delay",
+        type=float,
+        default=3.0,
+        help="Seconds to hold each wrist before zero-pose capture, 0-30 (default: 3).",
+    )
+    parser.add_argument(
+        "--simulation-table-calibration",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Run three-point table calibration before wrist capture (default: enabled).",
+    )
     args = parser.parse_args(argv)
-    if not args.left_hand_host and not args.right_hand_host:
-        parser.error("At least one hand host must be configured.")
+    if not args.left_hand_host and not args.right_hand_host and not args.simulation:
+        parser.error("Enable at least one hand host or the YAM simulation.")
     if args.frequency <= 0 or args.hand_frequency <= 0:
         parser.error("--frequency and --hand-frequency must be positive.")
     if not 1 <= args.tactile_frequency <= 60:
@@ -150,6 +180,9 @@ def parse_args(argv=None):
         parser.error("--target-speed must be in the range 0-1000.")
     if not 1 <= args.web_port <= 65535:
         parser.error("--web-port must be in the range 1-65535.")
+    if not 0 <= args.simulation_zero_delay <= 30:
+        parser.error("--simulation-zero-delay must be in the range 0-30.")
+    args.simulation_auto_start = args.simulation
     return args
 
 
@@ -162,8 +195,12 @@ def _apply_web_config(args, config):
         "left_device_id", "right_device_id", "modbus_port", "modbus_timeout",
         "target_speed", "speed_mode", "frequency", "hand_frequency",
         "tactile_frequency", "start", "open_on_exit", "hide_hand_markers",
+        "simulation_enabled", "simulation_viewer", "simulation_gpu",
+        "simulation_zero_delay", "simulation_table_calibration",
+        "simulation_auto_start",
     ):
-        setattr(args, name, config[name])
+        argument_name = "simulation" if name == "simulation_enabled" else name
+        setattr(args, argument_name, config[name])
 
 
 def main():
@@ -196,6 +233,9 @@ def main():
                 from inspire_teleoperation.hand_module import HandTeleopModule
                 from inspire_teleoperation.quest_source import QuestSource
                 from inspire_teleoperation.runtime import TeleopRuntime
+                from inspire_teleoperation.yam_simulation_lifecycle import (
+                    YamSimulationLifecycleModule,
+                )
 
                 source = QuestSource(
                     binocular=args.binocular,
@@ -203,24 +243,42 @@ def main():
                     display_mode=args.display_mode,
                     show_hand_markers=not args.hide_hand_markers,
                 )
-                hand_module = HandTeleopModule(
-                    left_host=args.left_hand_host,
-                    right_host=args.right_hand_host,
-                    open_on_exit=args.open_on_exit,
-                    port=args.modbus_port,
-                    left_device_id=args.left_device_id,
-                    right_device_id=args.right_device_id,
-                    timeout=args.modbus_timeout,
-                    target_speed=args.target_speed,
-                    speed_mode=args.speed_mode,
-                    fps=args.hand_frequency,
-                    tactile_frequency=args.tactile_frequency,
+                hand_module = (
+                    HandTeleopModule(
+                        left_host=args.left_hand_host,
+                        right_host=args.right_hand_host,
+                        open_on_exit=args.open_on_exit,
+                        port=args.modbus_port,
+                        left_device_id=args.left_device_id,
+                        right_device_id=args.right_device_id,
+                        timeout=args.modbus_timeout,
+                        target_speed=args.target_speed,
+                        speed_mode=args.speed_mode,
+                        fps=args.hand_frequency,
+                        tactile_frequency=args.tactile_frequency,
+                    )
+                    if args.left_hand_host or args.right_hand_host
+                    else None
                 )
-                runtime = TeleopRuntime(source, [hand_module])
+                simulation_module = YamSimulationLifecycleModule(
+                    auto_start=args.simulation_auto_start,
+                    viewer=args.simulation_viewer,
+                    gpu=args.simulation_gpu,
+                    zero_capture_delay=args.simulation_zero_delay,
+                    table_calibration_enabled=(
+                        args.simulation_table_calibration
+                    ),
+                )
+                modules = [
+                    module
+                    for module in (hand_module, simulation_module)
+                    if module is not None
+                ]
+                runtime = TeleopRuntime(source, modules)
                 runtime.set_enabled(state.tracking_enabled)
                 runtime.start()
 
-                logger_mp.info("Hand teleoperation is ready.")
+                logger_mp.info("Quest teleoperation Web session is ready.")
                 logger_mp.info(
                     "Use the web console to start or stop tracking, change speed, "
                     "or disconnect the devices."
@@ -233,8 +291,21 @@ def main():
                     )
                     if host
                 ]
-                logger_mp.info("Enabled hand(s): %s.", ", ".join(enabled_sides))
-                logger_mp.info("Keep clear of enabled hands while commands are enabled.")
+                if enabled_sides:
+                    logger_mp.info("Enabled real hand(s): %s.", ", ".join(enabled_sides))
+                    logger_mp.info(
+                        "Keep clear of enabled hands while commands are enabled."
+                    )
+                else:
+                    logger_mp.info(
+                        "Simulation-only session; no Modbus hand was opened."
+                    )
+                simulation_status = simulation_module.status()
+                if simulation_status.telemetry["last_error"]:
+                    logger_mp.warning(
+                        "Automatic simulation startup failed: %s",
+                        simulation_status.telemetry["last_error"],
+                    )
                 web_ui.set_phase("live")
 
                 session_started_at = time.monotonic()
@@ -246,8 +317,56 @@ def main():
                 while state.running and session_active:
                     cycle_start = time.monotonic()
                     tactile_selection = web_ui.poll_tactile_selection()
-                    if tactile_selection is not None:
+                    if tactile_selection is not None and hand_module is not None:
                         hand_module.set_tactile_sides(tactile_selection)
+                    simulation_command = web_ui.poll_simulation_command()
+                    if simulation_command is not None:
+                        command = simulation_command["command"]
+                        try:
+                            if command == "start":
+                                simulation_module.start_simulation(
+                                    zero_capture_delay=simulation_command[
+                                        "delay_seconds"
+                                    ]
+                                )
+                                logger_mp.info("Dual YAM simulation started.")
+                            elif command == "stop":
+                                simulation_module.stop_simulation()
+                                logger_mp.info("Dual YAM simulation closed.")
+                            elif command == "calibrate_table":
+                                simulation_module.request_table_calibration()
+                                logger_mp.info(
+                                    "Three-point table recalibration requested."
+                                )
+                            elif command == "set_table_calibration":
+                                enabled = simulation_command["enabled"]
+                                simulation_module.set_table_calibration_enabled(
+                                    enabled
+                                )
+                                logger_mp.info(
+                                    "Three-point table calibration %s.",
+                                    "enabled" if enabled else "skipped",
+                                )
+                            elif command == "capture_pose":
+                                side = simulation_command["side"]
+                                simulation_module.request_zero_capture(
+                                    side=None if side == "both" else side,
+                                    delay_seconds=simulation_command[
+                                        "delay_seconds"
+                                    ],
+                                )
+                                logger_mp.info(
+                                    "%s wrist zero-pose recapture requested "
+                                    "(%.1f seconds).",
+                                    side,
+                                    simulation_command["delay_seconds"],
+                                )
+                        except Exception as error:
+                            logger_mp.error(
+                                "Simulation command %s failed: %s",
+                                command,
+                                error,
+                            )
                     action = web_ui.poll_action()
                     if action == "run":
                         state.apply_action("run")
@@ -265,16 +384,22 @@ def main():
                         state.apply_action("quit")
                         runtime.set_enabled(False)
                         continue
-                    elif action == "speed_mode":
+                    elif action == "speed_mode" and hand_module is not None:
                         mode = hand_module.toggle_speed_mode()
                         logger_mp.info("Switched to %s joint speed mode.", mode)
-                    elif action == "motion_filter":
+                    elif action == "motion_filter" and hand_module is not None:
                         enabled = hand_module.toggle_motion_filter()
                         logger_mp.info(
                             "Motion micro-filter %s.",
                             "enabled" if enabled else "disabled",
                         )
                     elif action == "calibrate_force":
+                        if hand_module is None:
+                            web_ui.set_calibration_state(
+                                "failed",
+                                "No real dexterous hand is connected.",
+                            )
+                            continue
                         if state.tracking_enabled:
                             state.apply_action("pause")
                             runtime.set_enabled(False)
@@ -296,14 +421,14 @@ def main():
                             )
 
                     try:
-                        runtime.step()
+                        frame = runtime.step()
                     except (AttributeError, TypeError, ValueError) as error:
                         # A transient malformed XR frame must not become a robot
                         # command or kill the control session.
                         logger_mp.warning(
                             "Ignoring invalid Quest tracking frame: %s", error
                         )
-                        runtime.dispatch(TeleopFrame.empty())
+                        frame = runtime.dispatch(TeleopFrame.empty())
 
                     loop_sample_count += 1
                     sample_elapsed = time.monotonic() - loop_sample_started_at
@@ -313,8 +438,24 @@ def main():
                         loop_sample_count = 0
 
                     module_statuses = runtime.status()
-                    hand_status = module_statuses[hand_module.name]
-                    telemetry = hand_status.telemetry
+                    telemetry = (
+                        module_statuses[hand_module.name].telemetry
+                        if hand_module is not None
+                        else {
+                            "motion_data_ready": frame.motion_data_ready,
+                            "left_enabled": False,
+                            "right_enabled": False,
+                            "left_state": (),
+                            "right_state": (),
+                            "left_target": (),
+                            "right_target": (),
+                            "speed_mode": args.speed_mode,
+                            "motion_filter_enabled": False,
+                            "left_speed": (),
+                            "right_speed": (),
+                            "tactile": {},
+                        }
+                    )
                     web_ui.publish(
                         TeleopSnapshot(
                             tracking_enabled=state.tracking_enabled,
@@ -337,6 +478,7 @@ def main():
                                 name: {
                                     "ready": status.ready,
                                     "detail": status.detail,
+                                    "telemetry": dict(status.telemetry),
                                 }
                                 for name, status in module_statuses.items()
                             },

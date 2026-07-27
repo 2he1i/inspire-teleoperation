@@ -14,7 +14,6 @@ import numpy as np
 
 if TYPE_CHECKING:
     from .dexhand import Dexhand
-    from .hand_retargeting import HandRetargeting
 
 try:
     import logging_mp
@@ -501,13 +500,9 @@ class HandController:
     def _normalize_targets(targets: np.ndarray) -> np.ndarray:
         """Convert retargeting radians to the device's 0-closed/1-open scale."""
 
-        limits = ((0.0, 1.7),) * 4 + ((0.0, 0.5), (-0.1, 1.3))
-        normalized = np.empty(JOINT_COUNT, dtype=np.float64)
-        for index, (minimum, maximum) in enumerate(limits):
-            normalized[index] = np.clip(
-                (maximum - targets[index]) / (maximum - minimum), 0.0, 1.0
-            )
-        return normalized
+        from .hand_retargeting import normalize_hardware_targets
+
+        return normalize_hardware_targets(targets)
 
     def _read_hand_state(self, side: str) -> np.ndarray:
         state = np.asarray(
@@ -949,18 +944,10 @@ class HandController:
                     for side in self._hands:
                         try:
                             landmarks = landmarks_by_side[side]
-                            indices = getattr(self._hand_retargeting, f"{side}_indices")
-                            retargeting = getattr(
-                                self._hand_retargeting, f"{side}_retargeting"
+                            radians = self._hand_retargeting.retarget(
+                                side,
+                                landmarks,
                             )
-                            joint_order = getattr(
-                                self._hand_retargeting,
-                                f"{side}_dex_retargeting_to_hardware",
-                            )
-                            reference = (
-                                landmarks[indices[1, :]] - landmarks[indices[0, :]]
-                            )
-                            radians = retargeting.retarget(reference)[joint_order]
                             target = self._normalize_targets(radians)
                             if not np.isfinite(target).all():
                                 raise ValueError("retargeting produced non-finite targets")

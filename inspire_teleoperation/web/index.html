@@ -19,7 +19,7 @@
 
       <nav class="side-nav" aria-label="Main navigation">
         <p data-i18n="workspace">工作区</p>
-        <button class="nav-item active" type="button" data-nav="setup">
+        <button class="nav-item" type="button" data-nav="setup">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5h16v13H4zM8 9h8M8 13h5"/></svg>
           <span data-i18n="connection">设备接入</span>
           <i>1</i>
@@ -27,6 +27,10 @@
         <button class="nav-item" type="button" data-nav="dashboard" disabled>
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg>
           <span data-i18n="dashboard">实时控制</span>
+        </button>
+        <button class="nav-item active" type="button" data-nav="simulation">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 5h12v5H6zM8 10v4m8-4v4M5 14h6v5H5zm8 0h6v5h-6z"/></svg>
+          <span data-i18n="simulationNav">仿真控制</span>
         </button>
         <button class="nav-item" type="button" data-nav="tactile" disabled>
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
@@ -59,7 +63,7 @@
         <button id="menu-button" class="icon-button menu-button" type="button" aria-label="Open menu">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
         </button>
-        <div class="breadcrumb"><span>Inspire</span><i>/</i><strong id="page-name" data-i18n="connection">设备接入</strong></div>
+        <div class="breadcrumb"><span>Inspire</span><i>/</i><strong id="page-name" data-i18n="simulationNav">仿真控制</strong></div>
         <div class="topbar-meta">
           <span class="live-badge"><i></i><span data-i18n="localConsole">本地控制台</span></span>
           <span id="top-session" class="top-session" hidden><span data-i18n="session">会话</span><strong id="session-time">00:00:00</strong></span>
@@ -67,7 +71,7 @@
       </header>
 
       <main>
-        <section id="setup-view" class="setup-view page-view">
+        <section id="setup-view" class="setup-view page-view" hidden>
           <div class="page-heading">
             <div><p class="eyebrow" data-i18n="setupEyebrow">设备接入</p><h1 data-i18n="setupTitle">建立遥操作连接</h1><p data-i18n="setupLead">配置设备与控制策略，确认安全后启动会话。</p></div>
             <div class="stepper" aria-label="Connection progress">
@@ -153,18 +157,9 @@
               <button id="speed-button" class="secondary-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5l2 2M20 4v5h-5M20 12a8 8 0 0 1-14 5l-2-2M4 20v-5h5"/></svg><span data-i18n="switchSpeed">切换速度</span></button>
               <button id="motion-filter-button" class="secondary-button" type="button" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12h3l2-6 4 12 3-9 2 3h4"/></svg><span data-i18n="motionFilterOff">微滤波：关</span></button>
               <button id="force-calibration-button" class="secondary-button calibration-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v3M5.6 5.6l2.1 2.1M3 12h3m12 0h3M6 19h12M8 16a5 5 0 1 1 8 0M12 11l2.5-2.5"/></svg><span data-i18n="calibrateForce">力传感器校准</span></button>
-              <button id="tracking-button" class="run-button" type="button"><span class="play-icon"></span><span data-i18n="run">开始跟踪</span></button>
               <button id="disconnect-button" class="danger-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 8 5 12l4 4M5 12h10M15 5h4v14h-4"/></svg><span data-i18n="disconnect">断开设备</span></button>
             </div>
           </div>
-
-          <section class="runtime-banner">
-            <div class="runtime-primary"><span id="tracking-indicator" class="runtime-indicator"><i></i></span><span><small data-i18n="teleopStatus">遥操作状态</small><strong id="tracking-label">已暂停</strong><em id="tracking-detail">等待用户启动</em></span></div>
-            <div class="runtime-stat"><span data-i18n="questData">Quest 数据</span><strong id="quest-label">--</strong></div>
-            <div class="runtime-stat"><span data-i18n="loopRate">主循环频率</span><strong><b id="loop-rate">0.0</b><small>Hz</small></strong></div>
-            <div class="runtime-stat"><span data-i18n="speedMode">速度模式</span><strong id="speed-mode-label">--</strong></div>
-            <div class="safety-reminder"><span>!</span><p><b data-i18n="safetyTitle">进入工作区前</b><small data-i18n="safetyPause">请先暂停遥操作</small></p></div>
-          </section>
 
           <div class="hands-grid">
             <article class="hand-panel console-card" id="left-panel">
@@ -182,6 +177,79 @@
             <div class="log-table-heading"><span data-i18n="level">级别</span><span data-i18n="event">事件</span></div>
             <div id="log-preview-list" class="log-list log-preview-list" aria-live="polite"></div>
           </article>
+        </section>
+
+        <section id="simulation-view" class="simulation-view page-view">
+          <div class="dashboard-heading">
+            <div><p class="eyebrow" data-i18n="simulationEyebrow">仿真工作区</p><h1 data-i18n="simulationPageTitle">双臂仿真控制</h1><p data-i18n="simulationPageLead">启动或关闭 MuJoCo，并管理桌面坐标与双腕零位。</p></div>
+            <div id="simulation-live-actions" class="control-actions" hidden>
+              <button id="tracking-button" class="run-button" type="button"><span class="play-icon"></span><span data-i18n="run">开始同步</span></button>
+              <button id="simulation-disconnect-button" class="danger-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 8 5 12l4 4M5 12h10M15 5h4v14h-4"/></svg><span data-i18n="disconnectSimulation">退出仿真会话</span></button>
+            </div>
+          </div>
+
+          <section id="simulation-session-setup" class="console-card simulation-setup-section">
+            <div class="card-heading">
+              <div><span class="section-icon">01</span><span><h2 data-i18n="simulationSessionSetup">仿真会话配置</h2><p data-i18n="simulationSessionSetupHelp">无需接入 Modbus 设备，先连接 Quest，再手动启动仿真</p></span></div>
+            </div>
+            <div id="simulation-setup-fields" class="form-grid simulation-setup-fields">
+              <label class="simulation-setting"><span data-i18n="simulationGpu">渲染 GPU</span><select name="simulation_gpu"><option value="nvidia">NVIDIA</option><option value="system" data-i18n="systemGpu">系统默认</option></select></label>
+              <label class="simulation-setting"><span data-i18n="zeroCaptureDelay">零位捕获延时</span><div class="input-unit"><input name="simulation_zero_delay" type="number" min="0" max="30" step="0.1" required><b>s</b></div></label>
+              <div class="simulation-setting">
+                <span data-i18n="openSimulationViewer">打开 MuJoCo 窗口</span>
+                <label class="simulation-viewer-option"><input name="simulation_viewer" type="checkbox"><span><small data-i18n="openSimulationViewerHelp">窗口关闭不影响 Web 服务</small></span></label>
+              </div>
+              <div class="simulation-setting">
+                <span data-i18n="enableTableCalibration">执行桌面标定</span>
+                <label class="simulation-viewer-option"><input name="simulation_table_calibration" type="checkbox"><span><small data-i18n="enableTableCalibrationHelp">关闭后直接捕获腕部零位</small></span></label>
+              </div>
+            </div>
+            <div class="simulation-session-actions">
+              <div id="simulation-setup-error" class="form-error" role="alert"></div>
+              <button id="simulation-session-button" class="primary-button" type="button"><span data-i18n="connectQuestSession">连接 Quest</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+            </div>
+          </section>
+
+          <section id="simulation-runtime" hidden>
+          <section class="runtime-banner">
+            <div class="runtime-primary"><span id="tracking-indicator" class="runtime-indicator"><i></i></span><span><small data-i18n="simulationTracking">仿真同步</small><strong id="tracking-label">已暂停</strong><em id="tracking-detail">等待用户启动</em></span></div>
+            <div class="runtime-stat"><span data-i18n="questData">Quest 数据</span><strong id="quest-label">--</strong></div>
+            <div class="runtime-stat"><span data-i18n="loopRate">主循环频率</span><strong><b id="loop-rate">0.0</b><small>Hz</small></strong></div>
+            <div class="runtime-stat"><span data-i18n="tableCalibration">桌面标定</span><strong id="simulation-table-summary">--</strong></div>
+            <div class="safety-reminder"><span>!</span><p><b data-i18n="simulationSafetyTitle">操作仿真前</b><small data-i18n="simulationSafetyPause">调整零位或桌面坐标前先停止同步</small></p></div>
+          </section>
+
+          <section id="simulation-panel" class="simulation-panel console-card">
+            <header class="simulation-panel-heading">
+              <div><span class="simulation-icon" aria-hidden="true">Y</span><span><h2 data-i18n="simulationTitle">双 YAM 仿真</h2><p id="simulation-detail" data-i18n="simulationStoppedDetail">仿真尚未启动</p></span></div>
+              <span id="simulation-state" class="simulation-state" data-state="stopped"><i></i><span data-i18n="simulationStopped">已关闭</span></span>
+            </header>
+            <div class="simulation-body">
+              <div class="simulation-actions">
+                <button id="simulation-toggle-button" class="run-button" type="button"><span class="play-icon"></span><span data-i18n="startSimulation">启动仿真</span></button>
+                <button id="table-calibration-button" class="secondary-button" type="button"><span class="target-icon">⌖</span><span data-i18n="calibrateTable">重新标定桌面</span></button>
+                <label class="simulation-delay"><span data-i18n="zeroCaptureDelay">零位捕获延时</span><div class="input-unit"><input id="simulation-zero-delay" type="number" min="0" max="30" step="0.1" value="3"><b>s</b></div></label>
+                <label class="simulation-table-option"><input id="simulation-table-calibration-enabled" type="checkbox"><span><b data-i18n="enableTableCalibration">执行桌面标定</b><small data-i18n="enableTableCalibrationHelp">关闭后直接捕获腕部零位</small></span></label>
+                <button id="capture-left-button" class="secondary-button" type="button" data-capture-side="left"><span>L</span><span data-i18n="recaptureLeft">重捕获左腕</span></button>
+                <button id="capture-right-button" class="secondary-button" type="button" data-capture-side="right"><span>R</span><span data-i18n="recaptureRight">重捕获右腕</span></button>
+                <button id="capture-both-button" class="secondary-button" type="button" data-capture-side="both"><span>LR</span><span data-i18n="recaptureBoth">重捕获双腕</span></button>
+              </div>
+              <div class="simulation-progress">
+                <div class="simulation-table-status">
+                  <small data-i18n="tableCalibration">桌面标定</small>
+                  <strong id="table-calibration-state">--</strong>
+                  <p id="table-calibration-instruction">--</p>
+                  <div><i id="table-calibration-progress"></i></div>
+                </div>
+                <div class="simulation-arm-status">
+                  <span><small data-i18n="leftArm">左臂</small><strong id="left-arm-state">--</strong></span>
+                  <span><small data-i18n="rightArm">右臂</small><strong id="right-arm-state">--</strong></span>
+                  <span><small data-i18n="simulationGpu">渲染 GPU</small><strong id="simulation-gpu-state">--</strong></span>
+                </div>
+              </div>
+            </div>
+          </section>
+          </section>
         </section>
 
         <section id="logs-view" class="logs-view page-view" hidden>
