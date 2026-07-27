@@ -17,8 +17,8 @@ const copy = {
     captureTitle: "触觉信息采集", captureLead: "按指定频率将当前所选手部的触觉帧流式写入文件", captureFrequency: "采集频率", captureFrequencyHint: "不得高于当前触觉数据率", captureDuration: "采集时间", captureDurationHint: "最长 24 小时", captureOutput: "输出路径", captureOutputHint: "可填写目录或以 .jsonl 结尾的文件路径", captureFormat: "输出格式", captureFormatHint: "每行一帧，支持流式读取", captureStart: "开始采集", captureStop: "停止采集", captureIdle: "未开始", captureRecording: "采集中", captureStopping: "正在停止", captureCompleted: "采集完成", captureStopped: "已停止", captureFailed: "采集失败", captureWaiting: "等待开始采集", captureSamples: "帧", captureSavedTo: "输出文件", captureSelectHand: "请先选择要采集的手部。", captureProgress: "采集进度", captureDropped: "丢弃帧",
     joint: "关节", position: "实际 / 目标", speed: "速度", sixJoints: "6 个关节", latestEvents: "最近 4 条运行事件", viewAllLogs: "查看全部", logsEyebrow: "运行记录", logsLead: "查看当前控制会话的完整运行事件。", logEntries: "条记录", clearLogs: "清空日志", currentSession: "当前会话", realtimeUpdates: "日志实时更新", liveUpdate: "实时", time: "时间", clear: "清空", level: "级别", event: "事件", noEvents: "暂无运行日志",
     cancel: "取消", confirm: "确认", waitingSetup: "等待配置", connecting: "正在连接", disconnecting: "正在断开", live: "已连接", stopping: "正在停止", stopped: "已停止", error: "连接错误", paused: "同步已停止", running: "正在同步", waitingData: "等待手部数据", ready: "数据就绪", unavailable: "无数据", connected: "已连接", enabled: "已启用", disabled: "未启用",
-    fontSize: "界面字号", fontSizeHelp: "输入精确字号，整个控制台会按比例调整。", themeColor: "主题色", themeColorHelp: "选择预设颜色，或使用自定义颜色。", customColor: "自定义", resetAppearance: "恢复默认", shutdownService: "关闭控制服务", disconnectBeforeShutdown: "请先断开设备，再关闭控制服务。",
-    setupFailed: "无法提交配置", enableOneHandError: "请至少启用一只手。", duplicateHostError: "左右手不能使用相同的主机地址。", safetyConfirmationError: "请勾选工作区安全确认。", invalidSettingsError: "请检查高亮的设备地址或控制参数。", actionFailed: "操作失败", runTitle: "开始 Quest 同步？", runCopy: "确认仿真零位和桌面坐标已经设置妥当。开始后，Quest 双手将实时驱动仿真机械臂。", calibrateForceTitle: "校准力传感器？", calibrateForceCopy: "移除灵巧手上的外力与接触物。确认后将停止跟踪，并校准所有已连接的手。", calibrationRequested: "正在校准力传感器，请保持灵巧手不受外力。", calibrationRunningTitle: "正在校准", calibrationRunningCopy: "正在等待最短校准时间并验证六路力值稳定，请勿接触灵巧手。", calibrationCompletedTitle: "校准完成", calibrationCompletedCopy: "所有已连接灵巧手的零点力值已经稳定。确认后关闭此窗口。", calibrationFailedTitle: "校准失败", calibrationFailedCopy: "力值未能稳定或设备通信失败。", acknowledge: "确定", disconnectTitle: "断开当前会话？", disconnectCopy: "同步将停止，Quest 与仿真会话将关闭，随后可以直接重新启动仿真。", quitTitle: "关闭控制服务？", quitCopy: "所有设备会断开，当前页面也将停止提供服务。下次使用需要重新启动程序。", jointNames: ["小指", "无名指", "中指", "食指", "拇指", "旋转"], tactileRegions: { little_tip: "小指尖", little_nail: "小指背", little_pad: "小指腹", ring_tip: "无名指尖", ring_nail: "无名指背", ring_pad: "无名指腹", middle_tip: "中指尖", middle_nail: "中指背", middle_pad: "中指腹", index_tip: "食指尖", index_nail: "食指背", index_pad: "食指腹", thumb_tip: "拇指尖", thumb_nail: "拇指背", thumb_middle: "拇指中部", thumb_pad: "拇指腹", palm: "掌心" }, tactileGroups: { little: "小指", ring: "无名指", middle: "中指", index: "食指", thumb: "拇指", palm: "掌心" }
+    fontSize: "界面字号", fontSizeHelp: "输入精确字号，整个控制台会按比例调整。", themeColor: "主题色", themeColorHelp: "选择预设颜色，或使用自定义颜色。", customColor: "自定义", resetAppearance: "恢复默认", shutdownService: "关闭控制服务", disconnectBeforeShutdown: "请先断开设备，再关闭控制服务。", serviceStoppedTitle: "控制服务已关闭", serviceStoppedCopy: "浏览器阻止了自动关页，现在可以安全地关闭此标签页。",
+    setupFailed: "无法提交配置", enableOneHandError: "请至少启用一只手。", duplicateHostError: "左右手不能使用相同的主机地址。", safetyConfirmationError: "请勾选工作区安全确认。", invalidSettingsError: "请检查高亮的设备地址或控制参数。", actionFailed: "操作失败", runTitle: "开始 Quest 同步？", runCopy: "确认仿真零位和桌面坐标已经设置妥当。开始后，Quest 双手将实时驱动仿真机械臂。", calibrateForceTitle: "校准力传感器？", calibrateForceCopy: "移除灵巧手上的外力与接触物。确认后将停止跟踪，并校准所有已连接的手。", calibrationRequested: "正在校准力传感器，请保持灵巧手不受外力。", calibrationRunningTitle: "正在校准", calibrationRunningCopy: "正在等待最短校准时间并验证六路力值稳定，请勿接触灵巧手。", calibrationCompletedTitle: "校准完成", calibrationCompletedCopy: "所有已连接灵巧手的零点力值已经稳定。确认后关闭此窗口。", calibrationFailedTitle: "校准失败", calibrationFailedCopy: "力值未能稳定或设备通信失败。", acknowledge: "确定", disconnectTitle: "断开当前会话？", disconnectCopy: "同步将停止，Quest 与仿真会话将关闭，随后可以直接重新启动仿真。", quitTitle: "关闭控制服务？", quitCopy: "所有设备会断开，控制服务停止后当前网页将自动关闭。下次使用需要重新启动程序。", jointNames: ["小指", "无名指", "中指", "食指", "拇指", "旋转"], tactileRegions: { little_tip: "小指尖", little_nail: "小指背", little_pad: "小指腹", ring_tip: "无名指尖", ring_nail: "无名指背", ring_pad: "无名指腹", middle_tip: "中指尖", middle_nail: "中指背", middle_pad: "中指腹", index_tip: "食指尖", index_nail: "食指背", index_pad: "食指腹", thumb_tip: "拇指尖", thumb_nail: "拇指背", thumb_middle: "拇指中部", thumb_pad: "拇指腹", palm: "掌心" }, tactileGroups: { little: "小指", ring: "无名指", middle: "中指", index: "食指", thumb: "拇指", palm: "掌心" }
   },
   en: {
     workspace: "Workspace", connection: "Device setup", dashboard: "Live control", simulationNav: "Simulation", tactile: "Tactile feedback", systemLog: "System log", systemState: "System state", localConsole: "Local console", preferences: "Interface settings", appearance: "Appearance",
@@ -35,8 +35,8 @@ const copy = {
     captureTitle: "Tactile data capture", captureLead: "Stream tactile frames from the selected hands to a file at a defined rate", captureFrequency: "Capture rate", captureFrequencyHint: "Cannot exceed the available tactile data rate", captureDuration: "Duration", captureDurationHint: "Up to 24 hours", captureOutput: "Output path", captureOutputHint: "Enter a directory or a file ending in .jsonl", captureFormat: "Output format", captureFormatHint: "One frame per line for streaming reads", captureStart: "Start capture", captureStop: "Stop capture", captureIdle: "Not started", captureRecording: "Recording", captureStopping: "Stopping", captureCompleted: "Complete", captureStopped: "Stopped", captureFailed: "Capture failed", captureWaiting: "Waiting to start", captureSamples: "frames", captureSavedTo: "Output file", captureSelectHand: "Select at least one hand to capture.", captureProgress: "Capture progress", captureDropped: "Dropped frames",
     joint: "Joint", position: "Actual / target", speed: "Speed", sixJoints: "6 joints", latestEvents: "Latest 4 runtime events", viewAllLogs: "View all", logsEyebrow: "Runtime records", logsLead: "Review the complete event history for the current control session.", logEntries: "entries", clearLogs: "Clear logs", currentSession: "Current session", realtimeUpdates: "Logs update in real time", liveUpdate: "Live", time: "Time", clear: "Clear", level: "Level", event: "Event", noEvents: "No runtime events",
     cancel: "Cancel", confirm: "Confirm", waitingSetup: "Awaiting setup", connecting: "Connecting", disconnecting: "Disconnecting", live: "Connected", stopping: "Stopping", stopped: "Stopped", error: "Connection error", paused: "Sync stopped", running: "Syncing", waitingData: "Waiting for hand data", ready: "Data ready", unavailable: "Unavailable", connected: "Connected", enabled: "Enabled", disabled: "Disabled",
-    fontSize: "Interface font size", fontSizeHelp: "Enter an exact size to scale console typography.", themeColor: "Theme color", themeColorHelp: "Choose a preset or use a custom color.", customColor: "Custom", resetAppearance: "Reset appearance", shutdownService: "Stop control service", disconnectBeforeShutdown: "Disconnect the devices before stopping the control service.",
-    setupFailed: "Could not submit configuration", enableOneHandError: "Enable at least one hand.", duplicateHostError: "Left and right hands cannot use the same host address.", safetyConfirmationError: "Confirm that the hand workspace is clear.", invalidSettingsError: "Check the highlighted device addresses or control settings.", actionFailed: "Action failed", runTitle: "Start Quest sync?", runCopy: "Confirm the simulation zero poses and table frame are ready. Quest hands will drive both simulated arms in real time.", calibrateForceTitle: "Calibrate force sensors?", calibrateForceCopy: "Remove all loads and contact from the hands. Tracking will stop and every connected hand will be calibrated.", calibrationRequested: "Calibrating force sensors. Keep the hands unloaded.", calibrationRunningTitle: "Calibrating", calibrationRunningCopy: "Waiting for the minimum calibration time and stable readings from all six force channels. Do not touch the hands.", calibrationCompletedTitle: "Calibration complete", calibrationCompletedCopy: "Zero-force readings are stable on every connected hand. Confirm to close this window.", calibrationFailedTitle: "Calibration failed", calibrationFailedCopy: "Force readings did not stabilize or device communication failed.", acknowledge: "OK", disconnectTitle: "Disconnect current session?", disconnectCopy: "Sync, Quest, and the simulation session will stop. You can restart simulation directly afterward.", quitTitle: "Stop the control service?", quitCopy: "All devices will disconnect and this page will stop responding. Restart the program to use it again.", jointNames: ["Little", "Ring", "Middle", "Index", "Thumb", "Rotate"], tactileRegions: { little_tip: "Little tip", little_nail: "Little nail", little_pad: "Little pad", ring_tip: "Ring tip", ring_nail: "Ring nail", ring_pad: "Ring pad", middle_tip: "Middle tip", middle_nail: "Middle nail", middle_pad: "Middle pad", index_tip: "Index tip", index_nail: "Index nail", index_pad: "Index pad", thumb_tip: "Thumb tip", thumb_nail: "Thumb nail", thumb_middle: "Thumb middle", thumb_pad: "Thumb pad", palm: "Palm" }, tactileGroups: { little: "Little", ring: "Ring", middle: "Middle", index: "Index", thumb: "Thumb", palm: "Palm" }
+    fontSize: "Interface font size", fontSizeHelp: "Enter an exact size to scale console typography.", themeColor: "Theme color", themeColorHelp: "Choose a preset or use a custom color.", customColor: "Custom", resetAppearance: "Reset appearance", shutdownService: "Stop control service", disconnectBeforeShutdown: "Disconnect the devices before stopping the control service.", serviceStoppedTitle: "Control service stopped", serviceStoppedCopy: "The browser blocked automatic tab closing. You can safely close this tab now.",
+    setupFailed: "Could not submit configuration", enableOneHandError: "Enable at least one hand.", duplicateHostError: "Left and right hands cannot use the same host address.", safetyConfirmationError: "Confirm that the hand workspace is clear.", invalidSettingsError: "Check the highlighted device addresses or control settings.", actionFailed: "Action failed", runTitle: "Start Quest sync?", runCopy: "Confirm the simulation zero poses and table frame are ready. Quest hands will drive both simulated arms in real time.", calibrateForceTitle: "Calibrate force sensors?", calibrateForceCopy: "Remove all loads and contact from the hands. Tracking will stop and every connected hand will be calibrated.", calibrationRequested: "Calibrating force sensors. Keep the hands unloaded.", calibrationRunningTitle: "Calibrating", calibrationRunningCopy: "Waiting for the minimum calibration time and stable readings from all six force channels. Do not touch the hands.", calibrationCompletedTitle: "Calibration complete", calibrationCompletedCopy: "Zero-force readings are stable on every connected hand. Confirm to close this window.", calibrationFailedTitle: "Calibration failed", calibrationFailedCopy: "Force readings did not stabilize or device communication failed.", acknowledge: "OK", disconnectTitle: "Disconnect current session?", disconnectCopy: "Sync, Quest, and the simulation session will stop. You can restart simulation directly afterward.", quitTitle: "Stop the control service?", quitCopy: "All devices will disconnect and this tab will close automatically after the control service stops. Restart the program to use it again.", jointNames: ["Little", "Ring", "Middle", "Index", "Thumb", "Rotate"], tactileRegions: { little_tip: "Little tip", little_nail: "Little nail", little_pad: "Little pad", ring_tip: "Ring tip", ring_nail: "Ring nail", ring_pad: "Ring pad", middle_tip: "Middle tip", middle_nail: "Middle nail", middle_pad: "Middle pad", index_tip: "Index tip", index_nail: "Index nail", index_pad: "Index pad", thumb_tip: "Thumb tip", thumb_nail: "Thumb nail", thumb_middle: "Thumb middle", thumb_pad: "Thumb pad", palm: "Palm" }, tactileGroups: { little: "Little", ring: "Ring", middle: "Middle", index: "Index", thumb: "Thumb", palm: "Palm" }
   }
 };
 
@@ -62,6 +62,7 @@ let latestCapture = { state: "idle" };
 let captureRequestError = "";
 let calibrationDialogStage = "idle";
 let calibrationDialogDetail = "";
+let shutdownRequested = false;
 const preferenceKey = "inspire-console-appearance-v1";
 const setupPreferenceKey = "inspire-console-setup-v1";
 const capturePreferenceKey = "inspire-console-capture-v1";
@@ -1384,14 +1385,53 @@ async function refresh() {
     renderCalibration(state.calibration || { state: "idle", detail: "" });
     renderLogs(state.messages);
   } catch (error) {
+    if (shutdownRequested) return;
     $('#connection-label').textContent = t("error");
     $('#connection-dot').className = "status-dot error";
   }
 }
 
+function delay(milliseconds) {
+  return new Promise(resolve => window.setTimeout(resolve, milliseconds));
+}
+
+function showShutdownFallback() {
+  const fallback = $('#shutdown-complete');
+  fallback.hidden = false;
+  document.title = t("serviceStoppedTitle");
+}
+
+function closePageAfterShutdown() {
+  try {
+    window.close();
+  } catch (_error) {
+    // Browser policies can reject closing tabs that were not opened by script.
+  }
+  window.setTimeout(() => {
+    if (!window.closed) showShutdownFallback();
+  }, 250);
+}
+
+async function waitForServiceStopAndClose() {
+  shutdownRequested = true;
+  while (true) {
+    await delay(100);
+    try {
+      const response = await fetch("/api/state", { cache: "no-store" });
+      if (!response.ok) break;
+      const state = await response.json();
+      if (state.phase === "stopped") break;
+    } catch (_error) {
+      break;
+    }
+  }
+  closePageAfterShutdown();
+}
+
 async function sendAction(action) {
   try {
     await post("/api/action", { action });
+    if (action === "quit") void waitForServiceStopAndClose();
   }
   catch (error) { addLocalLog("error", `${t("actionFailed")}: ${error.message}`); }
 }
@@ -1709,7 +1749,9 @@ loadCapturePreferences();
 applyLanguage();
 renderLogs([]);
 async function runRefreshLoop() {
+  if (shutdownRequested) return;
   await refresh();
+  if (shutdownRequested) return;
   const configuredTactileRate = Math.max(1, Math.min(60, Number(latestSnapshot?.tactile?.target_hz || 10)));
   window.setTimeout(runRefreshLoop, activeNav === "tactile" ? 1000 / configuredTactileRate : 250);
 }

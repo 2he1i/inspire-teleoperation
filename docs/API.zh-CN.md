@@ -1091,7 +1091,7 @@ Web UI 使用 `threading.Condition` 保护 setup、动作、状态和消息。`a
 | `motion_filter` | 独立切换关节目标运动微滤波 |
 | `calibrate_force` | 停止跟踪并校准所有已连接手的力传感器 |
 | `disconnect` | 关闭当前设备与 Quest 会话，返回 `setup`，Web 服务保持运行 |
-| `quit` | 关闭当前设备会话和 Web 服务，退出程序 |
+| `quit` | 关闭当前设备会话和 Web 服务，退出程序；浏览器随后尝试自动关闭当前页 |
 
 成功返回 HTTP 202：
 
@@ -1116,6 +1116,10 @@ Content-Type: application/json
 
 成功后校准状态恢复为 `idle`，弹窗关闭。校准仍为 `queued` 或 `running` 时确认请求
 返回 HTTP 400。
+
+浏览器收到 `quit` 成功响应后会停止常规状态刷新，并等待后端进入 `stopped` 或本地
+Web 连接关闭，随后自动关闭当前页。若浏览器因安全策略不允许脚本关闭用户手动打开的
+标签页，页面会切换到“控制服务已关闭”终态提示，此时可安全地手动关闭标签页。
 
 ### 10.4.1 `POST /api/simulation`
 

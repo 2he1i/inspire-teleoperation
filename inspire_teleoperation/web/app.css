@@ -471,6 +471,13 @@ dialog p { margin: 10px 0 0; color: #8e98a3; font-size: .833rem; line-height: 1.
 dialog form > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 22px; }
 dialog form > div.single-action { grid-template-columns: 1fr; }
 
+.shutdown-complete { position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; padding: 24px; background: var(--background); text-align: center; }
+.shutdown-complete[hidden] { display: none; }
+.shutdown-complete > div { max-width: 32rem; }
+.shutdown-complete span { display: block; margin-bottom: 18px; font-size: 3rem; }
+.shutdown-complete h1 { margin: 0; font-size: 1.75rem; }
+.shutdown-complete p { margin: 12px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.7; }
+
 .preferences-dialog { width: min(max(490px, 32rem), calc(100% - 30px)); }
 .preferences-shell { padding: 25px; }
 .preferences-shell > header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 19px; border-bottom: 1px solid var(--line); }
